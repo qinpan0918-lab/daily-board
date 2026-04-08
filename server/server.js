@@ -29,6 +29,71 @@ if (!fs.existsSync(DATA_DIR)) {
 app.use(cors());
 app.use(express.json());
 
+// ============================================================
+//  数据备份/恢复机制
+//  解决 Render 重启/重新部署时数据丢失问题
+// ============================================================
+
+const BACKUP_DIR = path.join(DATA_DIR, 'backups');
+const MAX_BACKUPS = 5;
+
+function ensureBackupDir() {
+  if (!fs.existsSync(BACKUP_DIR)) {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  }
+}
+
+// 备份数据库：导出当前 DB 为带时间戳的文件
+function backupDB(db) {
+  try {
+    ensureBackupDir();
+    const data = db.export();
+    const buf = Buffer.from(data);
+    // 文件名格式：board_2026-04-08_19-30-00.db
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const backupFile = path.join(BACKUP_DIR, `board_${ts}.db`);
+    fs.writeFileSync(backupFile, buf);
+    
+    // 清理旧备份，只保留最近 N 个
+    const backups = fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.startsWith('board_') && f.endsWith('.db'))
+      .sort()
+      .reverse();
+    
+    for (let i = MAX_BACKUPS; i < backups.length; i++) {
+      fs.unlinkSync(path.join(BACKUP_DIR, backups[i]));
+    }
+    
+    console.log(`[BACKUP] 已备份到 ${backupFile}`);
+  } catch(e) {
+    console.error('[BACKUP] 备份失败:', e.message);
+  }
+}
+
+// 恢复数据库：从最新的备份文件恢复
+function restoreFromBackup() {
+  try {
+    ensureBackupDir();
+    const backups = fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.startsWith('board_') && f.endsWith('.db'))
+      .sort()
+      .reverse(); // 最新的在前
+    
+    if (backups.length === 0) {
+      return null;
+    }
+    
+    const latestBackup = path.join(BACKUP_DIR, backups[0]);
+    const buf = fs.readFileSync(latestBackup);
+    console.log('[RESTORE] 从备份恢复:', latestBackup);
+    return buf;
+  } catch(e) {
+    console.error('[RESTORE] 恢复失败:', e.message);
+    return null;
+  }
+}
+
+
 // ---- DB Init (async with sql.js) ----
 let dbPromise;
 
@@ -36,11 +101,25 @@ async function getDB() {
   if (!dbPromise) {
     const SQL = await initSqlJs();
     let db;
+    
+    // 数据加载优先级：主数据库 > 最新备份 > 全新空库
     if (fs.existsSync(DB_PATH)) {
       const buf = fs.readFileSync(DB_PATH);
       db = new SQL.Database(buf);
+      console.log('[DB] 从主数据库加载:', DB_PATH);
     } else {
-      db = new SQL.Database();
+      // 主数据库不存在，尝试从备份恢复
+      const backupBuf = restoreFromBackup();
+      if (backupBuf) {
+        db = new SQL.Database(backupBuf);
+        // 恢复成功后，写回主数据库路径
+        const data = db.export();
+        fs.writeFileSync(DB_PATH, Buffer.from(data));
+        console.log('[DB] 从备份恢复成功！数据已写入主数据库');
+      } else {
+        db = new SQL.Database();
+        console.log('[DB] 创建全新数据库（无备份数据）');
+      }
     }
 
     // Users table
@@ -78,14 +157,21 @@ async function getDB() {
 
     console.log('[DB] Initialized at', DB_PATH);
     
-    // Auto-save periodically and on shutdown
+    // Auto-save periodically and on shutdown + 定期自动备份
     const saveDB = () => {
       try { const data = db.export(); const buf = Buffer.from(data); fs.writeFileSync(DB_PATH, buf); }
       catch(e) {}
     };
-    setInterval(saveDB, 10000); // Save every 10 seconds
-    process.on('SIGINT', () => { saveDB(); process.exit(0); });
-    process.on('SIGTERM', () => { saveDB(); process.exit(0); });
+    
+    // 每 10 秒保存一次
+    setInterval(saveDB, 10000);
+    
+    // 每 5 分钟自动备份一次
+    setInterval(() => backupDB(db), 300000);
+    
+    // 关闭时保存 + 备份
+    process.on('SIGINT', () => { saveDB(); backupDB(db); process.exit(0); });
+    process.on('SIGTERM', () => { saveDB(); backupDB(db); process.exit(0); });
 
     dbPromise = Promise.resolve(db);
   }
@@ -362,6 +448,114 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
     daily: { total, done: doneCount, pending: pendingCount, rate },
     global: { total: globalTotal, done: globalDone, daysWithData }
   });
+});
+
+
+// ============================================================
+//  BACKUP / RESTORE APIs (require auth)
+// ============================================================
+
+// POST /api/backup — 手动触发备份
+app.post('/api/backup', authMiddleware, async (req, res) => {
+  const db = await getDB();
+  backupDB(db);
+  // 列出现有备份
+  try {
+    const backups = fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.startsWith('board_') && f.endsWith('.db'))
+      .sort()
+      .reverse();
+    res.json({ message: '备份完成', backups: backups.slice(0, 5) });
+  } catch(e) {
+    res.json({ message: '备份完成', backups: [] });
+  }
+});
+
+// GET /api/backups — 查看所有备份
+app.get('/api/backups', authMiddleware, async (req, res) => {
+  try {
+    ensureBackupDir();
+    const backups = fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.startsWith('board_') && f.endsWith('.db'))
+      .sort()
+      .reverse()
+      .map(f => {
+        const stat = fs.statSync(path.join(BACKUP_DIR, f));
+        return { name: f, size: (stat.size / 1024).toFixed(1) + 'KB', time: stat.mtime.toISOString() };
+      });
+    res.json({ backups });
+  } catch(e) {
+    res.json({ backups: [] });
+  }
+});
+
+// POST /api/restore — 从指定备份恢复
+app.post('/api/restore', authMiddleware, async (req, res) => {
+  const { backupFile } = req.body;
+  if (!backupFile) {
+    return res.status(400).json({ error: '需要指定 backupFile' });
+  }
+  
+  const targetPath = path.join(BACKUP_DIR, backupFile);
+  if (!fs.existsSync(targetPath)) {
+    return res.status(404).json({ error: '备份文件不存在' });
+  }
+  
+  try {
+    const buf = fs.readFileSync(targetPath);
+    // 写入主数据库路径（下次启动会自动加载）
+    fs.writeFileSync(DB_PATH, buf);
+    
+    // 同时重置内存中的数据库连接，让下一次请求使用新数据
+    if (dbPromise) {
+      const SQL = await initSqlJs();
+      const newDb = new SQL.Database(buf);
+      // 重新建表确保结构完整
+      newDb.run(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        name TEXT DEFAULT '',
+        avatar TEXT DEFAULT '',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_login DATETIME
+      )`);
+      newDb.run(`CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        category TEXT DEFAULT '工作',
+        done INTEGER DEFAULT 0,
+        start_time TEXT,
+        end_time TEXT,
+        task_date TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )`);
+      dbPromise = Promise.resolve(newDb);
+    }
+    
+    res.json({ message: `已从 ${backupFile} 恢复数据` });
+  } catch(e) {
+    res.status(500).json({ error: '恢复失败: ' + e.message });
+  }
+});
+
+// GET /api/export-db — 下载数据库文件（JSON 格式）
+app.get('/api/export-db', authMiddleware, async (req, res) => {
+  const db = await getDB();
+  try {
+    const users = queryAll(db, 'SELECT * FROM users');
+    const tasks = queryAll(db, 'SELECT * FROM tasks');
+    res.json({
+      exported_at: new Date().toISOString(),
+      version: '2.0.0',
+      data: { users, tasks }
+    });
+  } catch(e) {
+    res.status(500).json({ error: '导出失败' });
+  }
 });
 
 
