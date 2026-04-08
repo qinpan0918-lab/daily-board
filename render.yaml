@@ -1,14 +1,20 @@
 services:
   - type: web
     name: daily-board
-    env: docker
+    env: node
     plan: free
+    buildCommand: npm install
+    startCommand: node server.js
     envVars:
       - key: JWT_SECRET
         generateValue: true
+      - key: NODE_ENV
+        value: production
       - key: PORT
         value: "10000"
+      - key: RENDER_DISK_PATH
+        value: /opt/render/project/src/data
     disk:
       name: data
-      mountPath: /app/server/data
+      mountPath: /opt/render/project/src/data
       sizeGB: 1

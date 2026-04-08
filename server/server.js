@@ -15,11 +15,14 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'daily-board-secret-key-2024';
-const DB_PATH = path.join(__dirname, 'data', 'board.db');
+
+// 数据库路径：Render 持久化磁盘（优先），否则本地 data 目录
+const DATA_DIR = process.env.RENDER_DISK_PATH || path.join(__dirname, 'data');
+const DB_PATH = path.join(DATA_DIR, 'board.db');
 
 // Ensure data dir exists
-if (!fs.existsSync(path.join(__dirname, 'data'))) {
-  fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
 // ---- Middleware ----
