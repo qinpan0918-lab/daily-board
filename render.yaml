@@ -1,17 +1,14 @@
 services:
   - type: web
     name: daily-board
-    env: node
-    buildCommand: apt-get update && apt-get install -y python3 make g++ && cd server && npm install --build-from-source
-    startCommand: cd server && node server.js
+    env: docker
+    plan: free
     envVars:
       - key: JWT_SECRET
         generateValue: true
-      - key: NODE_ENV
-        value: production
       - key: PORT
-        value: 10000
+        value: "10000"
     disk:
       name: data
-      mountPath: /opt/render/project/src/server/data
+      mountPath: /app/server/data
       sizeGB: 1
