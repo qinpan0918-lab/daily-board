@@ -1,0 +1,1 @@
+{"name": "daily-board", "version": "1.0.0", "description": "海外云智服每日看板", "scripts": {"install": "cd server && npm install", "start": "cd server && node server.js"}, "engines": {"node": ">=18.0.0"}}
