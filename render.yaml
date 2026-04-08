@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: daily-board
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && node server.js
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    disk:
+      name: data
+      mountPath: /opt/render/project/src/server/data
+      sizeGB: 1
