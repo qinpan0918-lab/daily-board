@@ -2,6 +2,7 @@
 //  海外云智服每日看板 - 后端服务
 //  Tech: Express + sql.js (pure JS SQLite) + JWT + bcrypt
 //  改用 sql.js 避免原生模块编译问题，兼容 Render 免费版
+//  数据持久化：GitHub 远程备份（解决免费版无 disk 问题）
 // ============================================================
 
 const express = require('express');
@@ -16,8 +17,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'daily-board-secret-key-2024';
 
-// 数据库路径：Render 持久化磁盘（优先），否则本地 data 目录
-const DATA_DIR = process.env.RENDER_DISK_PATH || path.join(__dirname, 'data');
+// GitHub 远程备份配置（通过环境变量传入 Token）
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const GITHUB_REPO = process.env.GITHUB_REPO || 'qinpan0918-lab/daily-board';
+const GITHUB_BACKUP_PATH = 'data/backup/board_backup.json';
+const GITHUB_API_BASE = 'https://api.github.com';
+
+// 数据库路径：本地 data 目录（Render 免费版无持久磁盘）
+const DATA_DIR = path.join(__dirname, 'data');
 const DB_PATH = path.join(DATA_DIR, 'board.db');
 
 // Ensure data dir exists
@@ -30,12 +37,16 @@ app.use(cors());
 app.use(express.json());
 
 // ============================================================
-//  数据备份/恢复机制
-//  解决 Render 重启/重新部署时数据丢失问题
+//  数据备份/恢复机制（三层保护）
+//  Layer 1: 本地文件系统（同生命周期内有效）
+//  Layer 2: GitHub 远程备份（跨部署持久化，核心方案）
+//  Layer 3: 启动时自动从 GitHub 拉取恢复
 // ============================================================
 
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
 const MAX_BACKUPS = 5;
+// 远程备份间隔：每 5 分钟
+const REMOTE_BACKUP_INTERVAL = 5 * 60 * 1000;
 
 function ensureBackupDir() {
   if (!fs.existsSync(BACKUP_DIR)) {
@@ -43,13 +54,14 @@ function ensureBackupDir() {
   }
 }
 
+// ---- Layer 1: 本地备份 ----
+
 // 备份数据库：导出当前 DB 为带时间戳的文件
 function backupDB(db) {
   try {
     ensureBackupDir();
     const data = db.export();
     const buf = Buffer.from(data);
-    // 文件名格式：board_2026-04-08_19-30-00.db
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     const backupFile = path.join(BACKUP_DIR, `board_${ts}.db`);
     fs.writeFileSync(backupFile, buf);
@@ -64,31 +76,129 @@ function backupDB(db) {
       fs.unlinkSync(path.join(BACKUP_DIR, backups[i]));
     }
     
-    console.log(`[BACKUP] 已备份到 ${backupFile}`);
+    console.log(`[BACKUP] 本地备份完成: ${backupFile}`);
   } catch(e) {
-    console.error('[BACKUP] 备份失败:', e.message);
+    console.error('[BACKUP] 本地备份失败:', e.message);
   }
 }
 
-// 恢复数据库：从最新的备份文件恢复
-function restoreFromBackup() {
+// 恢复数据库：从最新的本地备份文件恢复
+function restoreFromLocalBackup() {
   try {
     ensureBackupDir();
     const backups = fs.readdirSync(BACKUP_DIR)
       .filter(f => f.startsWith('board_') && f.endsWith('.db'))
       .sort()
-      .reverse(); // 最新的在前
+      .reverse();
     
-    if (backups.length === 0) {
-      return null;
-    }
+    if (backups.length === 0) return null;
     
     const latestBackup = path.join(BACKUP_DIR, backups[0]);
     const buf = fs.readFileSync(latestBackup);
-    console.log('[RESTORE] 从备份恢复:', latestBackup);
+    console.log(`[RESTORE] 从本地备份恢复: ${latestBackup}`);
     return buf;
   } catch(e) {
-    console.error('[RESTORE] 恢复失败:', e.message);
+    console.error('[RESTORE] 本地恢复失败:', e.message);
+    return null;
+  }
+}
+
+// ---- Layer 2: GitHub 远程备份（跨部署持久化）----
+
+// 将数据库内容推送到 GitHub 仓库
+async function pushToGitHub(db) {
+  if (!GITHUB_TOKEN) {
+    console.warn('[GITHUB] 未配置 GITHUB_TOKEN，跳过远程备份');
+    return false;
+  }
+
+  try {
+    // 导出数据为 JSON
+    const users = queryAll(db, 'SELECT id, email, password, name, avatar, created_at, last_login FROM users');
+    const tasks = queryAll(db, 'SELECT * FROM tasks');
+    const backupData = {
+      version: '2.0.0',
+      exported_at: new Date().toISOString(),
+      data: { users, tasks }
+    };
+
+    const content = JSON.stringify(backupData, null, 2);
+    const contentB64 = Buffer.from(content).toString('base64');
+
+    // 先尝试获取现有文件的 SHA（用于更新）
+    const getUrl = `${GITHUB_API_BASE}/repos/${GITHUB_REPO}/contents/${GITHUB_BACKUP_PATH}`;
+    const getRes = await fetch(getUrl, {
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'User-Agent': 'daily-board' }
+    });
+    let sha = null;
+    if (getRes.ok) {
+      const existing = await getRes.json();
+      sha = existing.sha;
+    }
+
+    // 创建或更新文件
+    const putUrl = `${GITHUB_API_BASE}/repos/${GITHUB_REPO}/contents/${GITHUB_BACKUP_PATH}`;
+    const body = {
+      message: `[auto-backup] ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`,
+      content: contentB64
+    };
+    if (sha) body.sha = sha;
+
+    const putRes = await fetch(putUrl, {
+      method: 'PUT',
+      headers: { 
+        'Authorization': `token ${GITHUB_TOKEN}`, 
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'daily-board'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (putRes.ok) {
+      console.log(`[GITHUB] 远程备份成功 (${users.length} users, ${tasks.length} tasks)`);
+      return true;
+    } else {
+      const errText = await putRes.text();
+      console.error('[GITHUB] 远程备份失败:', putRes.status, errText.slice(0, 200));
+      return false;
+    }
+  } catch(e) {
+    console.error('[GITHUB] 远程备份异常:', e.message);
+    return false;
+  }
+}
+
+// 从 GitHub 拉取备份数据
+async function pullFromGitHub() {
+  if (!GITHUB_TOKEN) {
+    console.warn('[GITHUB] 未配置 GITHUB_TOKEN，跳过远程拉取');
+    return null;
+  }
+
+  try {
+    const url = `${GITHUB_API_BASE}/repos/${GITHUB_REPO}/contents/${GITHUB_BACKUP_PATH}`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'User-Agent': 'daily-board' }
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) {
+        console.log('[GITHUB] 远程无备份文件（首次使用）');
+      } else {
+        console.error('[GITHUB] 远程拉取失败:', res.status);
+      }
+      return null;
+    }
+
+    const fileData = await res.json();
+    // GitHub API 返回的 content 是 base64 编码
+    const jsonStr = Buffer.from(fileData.content, 'base64').toString('utf-8');
+    const backupData = JSON.parse(jsonStr);
+    
+    console.log(`[GITHUB] 远程拉取成功 (${backupData.data?.users?.length || 0} users, ${backupData.data?.tasks?.length || 0} tasks), 更新时间: ${backupData.exported_at}`);
+    return backupData;
+  } catch(e) {
+    console.error('[GITHUB] 远程拉取异常:', e.message);
     return null;
   }
 }
@@ -102,80 +212,118 @@ async function getDB() {
     const SQL = await initSqlJs();
     let db;
     
-    // 数据加载优先级：主数据库 > 最新备份 > 全新空库
+    // 数据加载优先级：本地主数据库 > 本地备份 > GitHub远程备份 > 全新空库
     if (fs.existsSync(DB_PATH)) {
       const buf = fs.readFileSync(DB_PATH);
       db = new SQL.Database(buf);
       console.log('[DB] 从主数据库加载:', DB_PATH);
     } else {
-      // 主数据库不存在，尝试从备份恢复
-      const backupBuf = restoreFromBackup();
-      if (backupBuf) {
-        db = new SQL.Database(backupBuf);
-        // 恢复成功后，写回主数据库路径
-        const data = db.export();
-        fs.writeFileSync(DB_PATH, Buffer.from(data));
-        console.log('[DB] 从备份恢复成功！数据已写入主数据库');
+      // 主数据库不存在 → 尝试本地备份
+      let localBuf = restoreFromLocalBackup();
+      if (localBuf) {
+        db = new SQL.Database(localBuf);
+        fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
+        console.log('[DB] 从本地备份恢复！数据已写入主数据库');
       } else {
-        db = new SQL.Database();
-        console.log('[DB] 创建全新数据库（无备份数据）');
+        // 本地也没有 → 尝试 GitHub 远程拉取
+        console.log('[DB] 本地无数据，尝试从 GitHub 远程拉取...');
+        const remoteData = await pullFromGitHub();
+        if (remoteData && remoteData.data && (remoteData.data.users.length > 0 || remoteData.data.tasks.length > 0)) {
+          db = new SQL.Database();
+          // 建表
+          createTables(db);
+          // 导入用户数据
+          for (const user of remoteData.data.users) {
+            db.run(`INSERT OR IGNORE INTO users (id, email, password, name, avatar, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [user.id, user.email, user.password, user.name || '', user.avatar || '', user.created_at, user.last_login]);
+          }
+          // 导入任务数据
+          for (const task of remoteData.data.tasks) {
+            db.run(`INSERT OR IGNORE INTO tasks (id, user_id, title, category, done, start_time, end_time, task_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [task.id, task.user_id, task.title, task.category || '工作', task.done || 0, task.start_time, task.end_time, task.task_date, task.created_at, task.updated_at]);
+          }
+          fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
+          console.log('[DB] ✅ 从 GitHub 远程恢复成功！数据已写入主数据库');
+        } else {
+          db = new SQL.Database();
+          console.log('[DB] 创建全新数据库（无任何备份数据）');
+        }
       }
     }
 
-    // Users table
-    db.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        name TEXT DEFAULT '',
-        avatar TEXT DEFAULT '',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_login DATETIME
-      )
-    `);
-
-    // Tasks table (per-user)
-    db.run(`
-      CREATE TABLE IF NOT EXISTS tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        category TEXT DEFAULT '工作',
-        done INTEGER DEFAULT 0,
-        start_time TEXT,
-        end_time TEXT,
-        task_date TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id)
-      )
-    `);
-
-    // Index for fast queries
-    db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, task_date)`);
+    // Users & Tasks tables
+    createTables(db);
 
     console.log('[DB] Initialized at', DB_PATH);
     
-    // Auto-save periodically and on shutdown + 定期自动备份
+    // Auto-save periodically and on shutdown + 定期自动备份（本地+远程）
     const saveDB = () => {
       try { const data = db.export(); const buf = Buffer.from(data); fs.writeFileSync(DB_PATH, buf); }
       catch(e) {}
     };
     
-    // 每 10 秒保存一次
+    // 每 10 秒保存一次到本地
     setInterval(saveDB, 10000);
     
-    // 每 5 分钟自动备份一次
-    setInterval(() => backupDB(db), 300000);
+    // 每 5 分钟：本地备份 + GitHub 远程备份
+    setInterval(() => {
+      backupDB(db);
+      pushToGitHub(db);
+    }, REMOTE_BACKUP_INTERVAL);
+    
+    // 启动后立即做一次远程备份（如果有数据的话）
+    setTimeout(() => pushToGitHub(db), 15000);
     
     // 关闭时保存 + 备份
-    process.on('SIGINT', () => { saveDB(); backupDB(db); process.exit(0); });
-    process.on('SIGTERM', () => { saveDB(); backupDB(db); process.exit(0); });
+    process.on('SIGINT', async () => { 
+      saveDB(); 
+      backupDB(db); 
+      await pushToGitHub(db);
+      process.exit(0); 
+    });
+    process.on('SIGTERM', async () => { 
+      saveDB(); 
+      backupDB(db); 
+      await pushToGitHub(db);
+      process.exit(0); 
+    });
 
     dbPromise = Promise.resolve(db);
   }
   return dbPromise;
+}
+
+// 建表函数（复用）
+function createTables(db) {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      name TEXT DEFAULT '',
+      avatar TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_login DATETIME
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      category TEXT DEFAULT '工作',
+      done INTEGER DEFAULT 0,
+      start_time TEXT,
+      end_time TEXT,
+      task_date TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, task_date)`);
 }
 
 // Helper: run a query and return results as array of objects
@@ -455,19 +603,27 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
 //  BACKUP / RESTORE APIs (require auth)
 // ============================================================
 
-// POST /api/backup — 手动触发备份
+// POST /api/backup — 手动触发备份（本地+远程）
 app.post('/api/backup', authMiddleware, async (req, res) => {
   const db = await getDB();
   backupDB(db);
-  // 列出现有备份
+  
+  // 同时触发远程备份
+  const remoteOk = await pushToGitHub(db);
+  
+  // 列出现有本地备份
   try {
     const backups = fs.readdirSync(BACKUP_DIR)
       .filter(f => f.startsWith('board_') && f.endsWith('.db'))
       .sort()
       .reverse();
-    res.json({ message: '备份完成', backups: backups.slice(0, 5) });
+    res.json({ 
+      message: '备份完成', 
+      local: backups.slice(0, 5),
+      remote: remoteOk ? '已推送至 GitHub' : 'GitHub 备份失败（检查 Token 配置）'
+    });
   } catch(e) {
-    res.json({ message: '备份完成', backups: [] });
+    res.json({ message: '本地备份完成', remote: remoteOk ? 'OK' : 'FAIL' });
   }
 });
 
@@ -556,6 +712,54 @@ app.get('/api/export-db', authMiddleware, async (req, res) => {
   } catch(e) {
     res.status(500).json({ error: '导出失败' });
   }
+});
+
+// GET /api/backup-status — 查看备份状态（本地+远程）
+app.get('/api/backup-status', authMiddleware, async (req, res) => {
+  const db = await getDB();
+  
+  // 本地备份列表
+  let localBackups = [];
+  try {
+    ensureBackupDir();
+    localBackups = fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.startsWith('board_') && f.endsWith('.db'))
+      .sort()
+      .reverse()
+      .map(f => ({ name: f, type: 'local' }));
+  } catch(e) {}
+  
+  // 远程备份状态
+  let remoteStatus = null;
+  if (GITHUB_TOKEN) {
+    try {
+      const remoteData = await pullFromGitHub();
+      if (remoteData) {
+        remoteStatus = {
+          ok: true,
+          exported_at: remoteData.exported_at,
+          users: remoteData.data?.users?.length || 0,
+          tasks: remoteData.data?.tasks?.length || 0
+        };
+      } else {
+        remoteStatus = { ok: false, reason: '远程无备份数据' };
+      }
+    } catch(e) {
+      remoteStatus = { ok: false, reason: e.message };
+    }
+  } else {
+    remoteStatus = { ok: false, reason: '未配置 GITHUB_TOKEN' };
+  }
+  
+  // 当前数据库数据量
+  const userCount = queryGet(db, 'SELECT COUNT(*) as cnt FROM users').cnt;
+  const taskCount = queryGet(db, 'SELECT COUNT(*) as cnt FROM tasks').cnt;
+  
+  res.json({
+    local: { backups: localBackups.slice(0, 5), count: localBackups.length },
+    remote: remoteStatus,
+    current: { users: userCount, tasks: taskCount, db_path: DB_PATH }
+  });
 });
 
 

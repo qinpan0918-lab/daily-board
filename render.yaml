@@ -12,9 +12,10 @@ services:
         value: production
       - key: PORT
         value: "10000"
-      - key: RENDER_DISK_PATH
-        value: /opt/render/project/src/data
-    disk:
-      name: data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
+      - key: GITHUB_TOKEN
+        sync: false # ⚠️ 需要在 Render Dashboard 手动填入 GitHub Personal Access Token
+      - key: GITHUB_REPO
+        value: qinpan0918-lab/daily-board
+    # ⚠️ 注意：Render 免费版不支持 disk 持久化存储！
+    # 数据持久化方案改用 GitHub 远程备份（每5分钟自动推送到仓库）
+    # disk 配置在免费版下不会生效，已移除
