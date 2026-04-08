@@ -1,1 +1,18 @@
-{"version":"2.0.0","exported_at":"2026-04-08T20:26:00Z","users":[],"tasks":[]}
+{
+  "version": "2.0.0",
+  "exported_at": "2026-04-08T20:30:00Z",
+  "data": {
+    "users": [
+      {
+        "id": 1,
+        "email": "930470286@qq.com",
+        "password": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+        "name": "kris",
+        "avatar": "",
+        "created_at": "2026-04-08T12:21:00Z",
+        "last_login": null
+      }
+    ],
+    "tasks": []
+  }
+}
