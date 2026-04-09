@@ -1,16 +1,16 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-09T03:45:27.252Z",
+  "exported_at": "2026-04-09T03:45:50.974Z",
   "data": {
     "users": [
       {
         "id": 1,
         "email": "930470286@qq.com",
-        "password": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+        "password": "$2b$10$rkmoSdybYv1S/e05.OA.6OxyBRuNDYV1kgDN3rjq62AJbdJrFNq/y",
         "name": "kris",
         "avatar": "",
         "created_at": "2026-04-08T12:21:00Z",
-        "last_login": null
+        "last_login": "2026-04-09 03:45:50"
       }
     ],
     "tasks": []
