@@ -27,6 +27,18 @@ const GITHUB_API_BASE = 'https://api.github.com';
 const DATA_DIR = path.join(__dirname, 'data');
 const DB_PATH = path.join(DATA_DIR, 'board.db');
 
+// ============================================================
+//  种子账号（Seed Account）- 确保账号永远可用
+//  如果数据库被清空或密码 hash 错误，启动时自动修复
+// ============================================================
+const SEED_ACCOUNT = {
+  email: '930470286@qq.com',
+  password: 'kris2026',
+  // bcrypt hash of 'kris2026' (generated with cost=10)
+  passwordHash: '\$2b\$10\$rkmoSdybYv1S/e05.OA.6OxyBRuNDYV1kgDN3rjq62AJbdJrFNq/y',
+  name: 'kris'
+};
+
 // Ensure data dir exists
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -113,7 +125,10 @@ async function pushToGitHub(db) {
   }
 
   try {
-    // 导出数据为 JSON
+    // ⭐ 备份前先修复种子账号密码（防止错误 hash 反复覆盖）
+    ensureSeedAccount(db);
+
+    // 导出数据为 JSON（此时种子账号的 hash 已经是正确的了）
     const users = queryAll(db, 'SELECT id, email, password, name, avatar, created_at, last_login FROM users');
     const tasks = queryAll(db, 'SELECT * FROM tasks');
     const backupData = {
@@ -261,6 +276,9 @@ async function getDB() {
     // Users & Tasks tables
     createTables(db);
 
+    // ⭐ 种子账号修复：确保 930470286@qq.com 永远可用
+    ensureSeedAccount(db);
+
     console.log('[DB] Initialized at', DB_PATH);
     
     // Auto-save periodically and on shutdown + 定期自动备份（本地+远程）
@@ -344,6 +362,29 @@ function importRemoteData(db, remoteData) {
   for (const task of remoteData.data.tasks) {
     db.run(`INSERT OR REPLACE INTO tasks (id, user_id, title, category, done, start_time, end_time, task_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [task.id, task.user_id, task.title, task.category || '工作', task.done || 0, task.start_time, task.end_time, task.task_date, task.created_at, task.updated_at]);
+  }
+}
+
+// 种子账号确保机制：如果种子账号不存在或密码 hash 不匹配，自动修复
+function ensureSeedAccount(db) {
+  try {
+    const existing = queryGet(db, 'SELECT id, password FROM users WHERE email = ?', [SEED_ACCOUNT.email]);
+    if (!existing) {
+      // 账号不存在 → 创建
+      db.run(`INSERT OR IGNORE INTO users (email, password, name) VALUES (?, ?, ?)`,
+        [SEED_ACCOUNT.email, SEED_ACCOUNT.passwordHash, SEED_ACCOUNT.name]);
+      console.log(`[SEED] 已创建种子账号: ${SEED_ACCOUNT.email}`);
+    } else {
+      // 账号存在 → 验证密码 hash 是否正确（用 bcrypt.compare 异步检查）
+      // 这里我们直接用同步方式：如果 hash 不是预期的格式，就覆盖
+      // 因为 sql.js 是同步的，我们无法在这里调用 bcrypt.compare
+      // 所以采用策略：每次启动都用正确的 hash 覆盖（幂等操作）
+      db.run(`UPDATE users SET password = ?, name = ? WHERE email = ?`,
+        [SEED_ACCOUNT.passwordHash, SEED_ACCOUNT.name, SEED_ACCOUNT.email]);
+      console.log(`[SEED] 已修复种子账号密码: ${SEED_ACCOUNT.email}`);
+    }
+  } catch(e) {
+    console.error('[SEED] 种子账号修复失败:', e.message);
   }
 }
 
