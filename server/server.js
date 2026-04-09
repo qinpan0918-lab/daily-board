@@ -118,6 +118,7 @@ function restoreFromLocalBackup() {
 // ---- Layer 2: GitHub 远程备份（跨部署持久化）----
 
 // 将数据库内容推送到 GitHub 仓库
+// ⚠️ 安全保护：如果当前本地任务数为0但远程有数据，拒绝覆盖（防止空库覆盖历史备份）
 async function pushToGitHub(db) {
   if (!GITHUB_TOKEN) {
     console.warn('[GITHUB] 未配置 GITHUB_TOKEN，跳过远程备份');
@@ -125,18 +126,60 @@ async function pushToGitHub(db) {
   }
 
   try {
+    // 导出当前数据
+    const users = queryAll(db, 'SELECT id, email, password, name, avatar, created_at, last_login FROM users');
+    const tasks = queryAll(db, 'SELECT * FROM tasks');
+
+    // ⭐⭐ 关键安全检查：如果本地没有任务数据，先检查远程是否有数据
+    // 如果远程有任务而本地为空 → 说明是重部署后的空库，绝对不能覆盖！
+    if (tasks.length === 0) {
+      console.log('[GITHUB] ⚠️ 本地无任务数据，检查远程备份是否存在有效数据...');
+      const remoteData = await pullFromGitHub();
+      if (remoteData && remoteData.data && remoteData.data.tasks && remoteData.data.tasks.length > 0) {
+        console.error(`[GITHUB] 🛑 拒绝覆盖！远程有 ${remoteData.data.tasks.length} 条任务，本地为空。正在从远程恢复...`);
+        // 自动从远程恢复数据到本地
+        importRemoteData(db, remoteData);
+        // 恢复后重新导出（此时 tasks 应该有数据了）
+        const recoveredTasks = queryAll(db, 'SELECT * FROM tasks');
+        const recoveredUsers = queryAll(db, 'SELECT id, email, password, name, avatar, created_at, last_login FROM users');
+        console.log(`[GITHUB] ✅ 已从远程自动恢复: ${recoveredUsers.length} users, ${recoveredTasks.length} tasks`);
+        
+        // 用恢复后的数据继续推送（不再递归）
+        const backupData = {
+          version: '2.0.0',
+          exported_at: new Date().toISOString(),
+          note: 'auto-recovered from remote before push',
+          data: { users: recoveredUsers, tasks: recoveredTasks }
+        };
+        return await githubPushJSON(backupData);
+      } else {
+        console.log('[GITHUB] 远程也无任务数据，允许推送空备份（首次使用或确实无数据）');
+      }
+    }
+
     // ⭐ 备份前先修复种子账号密码（防止错误 hash 反复覆盖）
     ensureSeedAccount(db);
 
-    // 导出数据为 JSON（此时种子账号的 hash 已经是正确的了）
-    const users = queryAll(db, 'SELECT id, email, password, name, avatar, created_at, last_login FROM users');
-    const tasks = queryAll(db, 'SELECT * FROM tasks');
+    // 重新导出（ensureSeedAccount 可能修改了用户表）
+    const finalUsers = queryAll(db, 'SELECT id, email, password, name, avatar, created_at, last_login FROM users');
+    const finalTasks = queryAll(db, 'SELECT * FROM tasks');
+
     const backupData = {
       version: '2.0.0',
       exported_at: new Date().toISOString(),
-      data: { users, tasks }
+      data: { users: finalUsers, tasks: finalTasks }
     };
 
+    return await githubPushJSON(backupData);
+  } catch(e) {
+    console.error('[GITHUB] 远程备份异常:', e.message);
+    return false;
+  }
+}
+
+// 实际执行 GitHub Contents API 推送
+async function githubPushJSON(backupData) {
+  try {
     const content = JSON.stringify(backupData, null, 2);
     const contentB64 = Buffer.from(content).toString('base64');
 
@@ -170,7 +213,9 @@ async function pushToGitHub(db) {
     });
 
     if (putRes.ok) {
-      console.log(`[GITHUB] 远程备份成功 (${users.length} users, ${tasks.length} tasks)`);
+      const taskCount = backupData.data?.tasks?.length || 0;
+      const userCount = backupData.data?.users?.length || 0;
+      console.log(`[GITHUB] 远程备份成功 (${userCount} users, ${taskCount} tasks)`);
       return true;
     } else {
       const errText = await putRes.text();
@@ -178,7 +223,7 @@ async function pushToGitHub(db) {
       return false;
     }
   } catch(e) {
-    console.error('[GITHUB] 远程备份异常:', e.message);
+    console.error('[GITHUB] githubPushJSON 异常:', e.message);
     return false;
   }
 }
@@ -237,17 +282,23 @@ async function getDB() {
       // Render 可能保留了空的 board.db 文件（只有表结构没有数据）
       try {
         const userCount = db.exec("SELECT COUNT(*) as cnt FROM users")[0]?.values[0]?.[0] || 0;
-        if (userCount === 0) {
-          console.log('[DB] 本地数据库为空（无用户），尝试从 GitHub 远程拉取...');
+        const taskCount = db.exec("SELECT COUNT(*) as cnt FROM tasks")[0]?.values[0]?.[0] || 0;
+        console.log(`[DB] 本地数据: ${userCount} users, ${taskCount} tasks`);
+        
+        if (taskCount === 0) {
+          console.log('[DB] ⚠️ 本地无任务数据，尝试从 GitHub 远程拉取...');
           const remoteData = await pullFromGitHub();
           if (remoteData && remoteData.data && (remoteData.data.users.length > 0 || remoteData.data.tasks.length > 0)) {
             importRemoteData(db, remoteData);
             fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
-            console.log('[DB] ✅ 从 GitHub 远程恢复成功！（覆盖空库）');
+            const newTaskCount = db.exec("SELECT COUNT(*) as cnt FROM tasks")[0]?.values[0]?.[0] || 0;
+            console.log(`[DB] ✅ 从 GitHub 远程恢复成功！已写入主数据库（${newTaskCount} 条任务）`);
+          } else {
+            console.log('[DB] 远程也无备份数据，使用空数据库');
           }
         }
       } catch(e) {
-        console.warn('[DB] 检查用户数失败:', e.message);
+        console.warn('[DB] 检查数据量失败:', e.message);
       }
     } else {
       // 主数据库不存在 → 尝试本地备份
@@ -265,7 +316,8 @@ async function getDB() {
           createTables(db);
           importRemoteData(db, remoteData);
           fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
-          console.log('[DB] ✅ 从 GitHub 远程恢复成功！数据已写入主数据库');
+          const initTaskCount = db.exec("SELECT COUNT(*) as cnt FROM tasks")[0]?.values[0]?.[0] || 0;
+          console.log(`[DB] ✅ 从 GitHub 远程恢复成功！数据已写入主数据库（${initTaskCount} 条任务）`);
         } else {
           db = new SQL.Database();
           console.log('[DB] 创建全新数据库（无任何备份数据）');
@@ -296,8 +348,9 @@ async function getDB() {
       pushToGitHub(db);
     }, REMOTE_BACKUP_INTERVAL);
     
-    // 启动后立即做一次远程备份（如果有数据的话）
-    setTimeout(() => pushToGitHub(db), 15000);
+    // 启动后延迟做一次远程备份（给足够时间让数据先稳定）
+    // 注意：pushToGitHub 现在有空数据保护机制，不会用空库覆盖远程
+    setTimeout(() => pushToGitHub(db), 30000);  // 延长到30秒
     
     // 关闭时保存 + 备份
     process.on('SIGINT', async () => { 
