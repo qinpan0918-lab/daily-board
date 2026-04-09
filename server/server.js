@@ -395,11 +395,29 @@ function createTables(db) {
       start_time TEXT,
       end_time TEXT,
       task_date TEXT NOT NULL,
+      start_date TEXT,
+      end_date TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
+
+  // 迁移：为已有表添加跨天字段（如果不存在）
+  try {
+    const cols = queryAll(db, "PRAGMA table_info(tasks)");
+    const colNames = cols.map(c => c.name);
+    if (!colNames.includes('start_date')) {
+      db.run(`ALTER TABLE tasks ADD COLUMN start_date TEXT`);
+      console.log('[DB] 迁移: 已添加 start_date 字段');
+    }
+    if (!colNames.includes('end_date')) {
+      db.run(`ALTER TABLE tasks ADD COLUMN end_date TEXT`);
+      console.log('[DB] 迁移: 已添加 end_date 字段');
+    }
+  } catch(e) {
+    console.warn('[DB] 迁移跨天字段失败（可能已存在）:', e.message);
+  }
 
   db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, task_date)`);
 }
@@ -581,13 +599,24 @@ async function authMiddleware(req, res, next) {
 //  TASK APIs (all require auth)
 // ============================================================
 
-// GET /api/tasks?date=2024-04-08 — 获取某天任务
+// GET /api/tasks?date=2024-04-08 — 获取某天任务（含跨天事项）
 app.get('/api/tasks', authMiddleware, async (req, res) => {
   const db = await getDB();
   const { date } = req.query;
   let tasks;
   if (date) {
-    tasks = queryAll(db, 'SELECT * FROM tasks WHERE user_id = ? AND task_date = ? ORDER BY created_at ASC', [req.user.userId, date]);
+    // 查询逻辑：
+    // 1. task_date == date（普通单日任务，或跨天任务的起始日）
+    // 2. start_date <= date <= end_date（跨天任务的覆盖范围）
+    tasks = queryAll(db, `
+      SELECT * FROM tasks 
+      WHERE user_id = ? 
+        AND (
+          task_date = ? 
+          OR (start_date IS NOT NULL AND start_date != '' AND end_date IS NOT NULL AND end_date != '' AND ? >= start_date AND ? <= end_date)
+        )
+      ORDER BY created_at ASC
+    `, [req.user.userId, date, date, date]);
   } else {
     tasks = queryAll(db, 'SELECT * FROM tasks WHERE user_id = ? ORDER BY task_date DESC, created_at ASC', [req.user.userId]);
   }
@@ -601,17 +630,21 @@ app.get('/api/tasks', authMiddleware, async (req, res) => {
 
 // POST /api/tasks — 创建任务
 app.post('/api/tasks', authMiddleware, async (req, res) => {
-  const { title, category, done, startTime, endTime, date } = req.body;
+  const { title, category, done, startTime, endTime, date, startDate, endDate } = req.body;
   if (!title || !title.trim()) {
     return res.status(400).json({ error: '事项内容不能为空' });
   }
   
   const taskDate = date || new Date().toISOString().slice(0, 10);
+  // 跨天：如果有 startDate/endDate，用它们；否则退化为单日（start_date=end_date=null）
+  const sd = startDate && startDate !== taskDate ? startDate : null;
+  const ed = endDate && endDate !== taskDate ? endDate : null;
+  
   const db = await getDB();
 
   queryRun(db, `
-    INSERT INTO tasks (user_id, title, category, done, start_time, end_time, task_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO tasks (user_id, title, category, done, start_time, end_time, task_date, start_date, end_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     req.user.userId,
     title.trim(),
@@ -619,17 +652,19 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
     done ? 1 : 0,
     startTime || null,
     endTime || null,
-    taskDate
+    taskDate,
+    sd,
+    ed
   ]);
 
   const task = queryGet(db, 'SELECT * FROM tasks WHERE rowid = last_insert_rowid()');
   res.json({ task: { ...task, done: task.done === 1 }, message: '创建成功' });
 });
 
-// PUT /api/tasks/:id — 更新任务
+// PUT /api/tasks/:id — 更新任务（支持跨天字段）
 app.put('/api/tasks/:id', authMiddleware, async (req, res) => {
   const taskId = parseInt(req.params.id, 10);
-  const { title, category, done, startTime, endTime } = req.body;
+  const { title, category, done, startTime, endTime, startDate, endDate } = req.body;
   const db = await getDB();
 
   // Verify ownership
@@ -638,8 +673,12 @@ app.put('/api/tasks/:id', authMiddleware, async (req, res) => {
     return res.status(404).json({ error: '事项不存在' });
   }
 
+  // 跨天日期处理：如果传了 startDate/endDate 就更新，否则保持原值
+  const sd = startDate !== undefined ? (startDate || null) : existing.start_date;
+  const ed = endDate !== undefined ? (endDate || null) : existing.end_date;
+
   queryRun(db, `
-    UPDATE tasks SET title=?, category=?, done=?, start_time=?, end_time=?, updated_at=CURRENT_TIMESTAMP
+    UPDATE tasks SET title=?, category=?, done=?, start_time=?, end_time=?, start_date=?, end_date=?, updated_at=CURRENT_TIMESTAMP
     WHERE id=?
   `, [
     title !== undefined ? title.trim() : existing.title,
@@ -647,6 +686,8 @@ app.put('/api/tasks/:id', authMiddleware, async (req, res) => {
     done !== undefined ? (done ? 1 : 0) : existing.done,
     startTime !== undefined ? startTime : existing.start_time,
     endTime !== undefined ? endTime : existing.end_time,
+    sd,
+    ed,
     taskId
   ]);
 
@@ -800,6 +841,8 @@ app.post('/api/restore', authMiddleware, async (req, res) => {
         start_time TEXT,
         end_time TEXT,
         task_date TEXT NOT NULL,
+        start_date TEXT,
+        end_date TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id)
