@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-09T11:12:23.542Z",
+  "exported_at": "2026-04-09T11:12:25.175Z",
   "data": {
     "users": [
       {
@@ -109,42 +109,6 @@
         "task_date": "2026-04-09",
         "created_at": "2026-04-09 06:50:44",
         "updated_at": "2026-04-09 06:50:44"
-      },
-      {
-        "id": 16,
-        "user_id": 1,
-        "title": "ai",
-        "category": "工作",
-        "done": 0,
-        "start_time": null,
-        "end_time": null,
-        "task_date": "2026-04-09",
-        "created_at": "2026-04-09 11:12:07",
-        "updated_at": "2026-04-09 11:12:07"
-      },
-      {
-        "id": 17,
-        "user_id": 1,
-        "title": "ai",
-        "category": "工作",
-        "done": 0,
-        "start_time": null,
-        "end_time": null,
-        "task_date": "2026-04-09",
-        "created_at": "2026-04-09 11:12:10",
-        "updated_at": "2026-04-09 11:12:10"
-      },
-      {
-        "id": 18,
-        "user_id": 1,
-        "title": "ai",
-        "category": "工作",
-        "done": 0,
-        "start_time": null,
-        "end_time": null,
-        "task_date": "2026-04-09",
-        "created_at": "2026-04-09 11:12:11",
-        "updated_at": "2026-04-09 11:12:11"
       }
     ]
   }
