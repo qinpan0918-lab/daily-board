@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-09T11:51:24.270Z",
+  "exported_at": "2026-04-09T11:52:07.282Z",
   "data": {
     "users": [
       {
@@ -23,6 +23,8 @@
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 06:45:05",
         "updated_at": "2026-04-09 11:40:49"
       },
@@ -35,6 +37,8 @@
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 06:45:05",
         "updated_at": "2026-04-09 06:45:05"
       },
@@ -47,6 +51,8 @@
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 06:45:06",
         "updated_at": "2026-04-09 06:47:59"
       },
@@ -59,6 +65,8 @@
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 06:45:07",
         "updated_at": "2026-04-09 06:48:01"
       },
@@ -71,6 +79,8 @@
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 06:45:07",
         "updated_at": "2026-04-09 06:45:07"
       },
@@ -83,6 +93,8 @@
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 06:45:07",
         "updated_at": "2026-04-09 06:45:07"
       },
@@ -95,6 +107,8 @@
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 06:45:07",
         "updated_at": "2026-04-09 06:48:03"
       },
@@ -107,6 +121,8 @@
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-09",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 06:50:44",
         "updated_at": "2026-04-09 06:50:44"
       },
@@ -119,6 +135,8 @@
         "start_time": "",
         "end_time": "",
         "task_date": "2026-04-09",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 11:44:24",
         "updated_at": "2026-04-09 11:44:32"
       }
