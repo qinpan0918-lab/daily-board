@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-09T11:45:13.492Z",
+  "exported_at": "2026-04-09T11:45:36.157Z",
   "data": {
     "users": [
       {
@@ -109,6 +109,18 @@
         "task_date": "2026-04-09",
         "created_at": "2026-04-09 06:50:44",
         "updated_at": "2026-04-09 06:50:44"
+      },
+      {
+        "id": 16,
+        "user_id": 1,
+        "title": "ai数据看板测试",
+        "category": "工作",
+        "done": 0,
+        "start_time": "",
+        "end_time": "",
+        "task_date": "2026-04-09",
+        "created_at": "2026-04-09 11:44:24",
+        "updated_at": "2026-04-09 11:44:32"
       }
     ]
   }
