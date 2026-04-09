@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-09T04:04:14.062Z",
+  "exported_at": "2026-04-09T04:04:16.116Z",
   "data": {
     "users": [
       {
@@ -13,6 +13,91 @@
         "last_login": "2026-04-09 03:54:53"
       }
     ],
-    "tasks": []
+    "tasks": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "title": "完成反作弊系统PRD初稿评审",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:35",
+        "updated_at": "2026-04-09 04:03:35"
+      },
+      {
+        "id": 2,
+        "user_id": 1,
+        "title": "与后端团队对齐API接口定义",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:35",
+        "updated_at": "2026-04-09 04:03:35"
+      },
+      {
+        "id": 3,
+        "user_id": 1,
+        "title": "整理竞品分析报告",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:35",
+        "updated_at": "2026-04-09 04:03:35"
+      },
+      {
+        "id": 4,
+        "user_id": 1,
+        "title": "更新项目进度文档",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:36",
+        "updated_at": "2026-04-09 04:03:36"
+      },
+      {
+        "id": 5,
+        "user_id": 1,
+        "title": "参加产品周会",
+        "category": "会议",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:36",
+        "updated_at": "2026-04-09 04:03:36"
+      },
+      {
+        "id": 6,
+        "user_id": 1,
+        "title": "审核UI设计稿V2版本",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:36",
+        "updated_at": "2026-04-09 04:03:36"
+      },
+      {
+        "id": 7,
+        "user_id": 1,
+        "title": "回复客户需求确认邮件",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:37",
+        "updated_at": "2026-04-09 04:03:37"
+      }
+    ]
   }
 }
