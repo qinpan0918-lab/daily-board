@@ -1258,8 +1258,8 @@ function openEdit(id){
 }
 
 function saveEdit(){
-  var id=parseFloat(document.getElementById('editId').value);
-  if(!id)return;
+  var id=parseInt(document.getElementById('editId').value,10);
+  if(!id||isNaN(id)){toast('事项ID无效');return;}
   var title=(document.getElementById('editTitle').value||'').trim();
   if(!title){toast('事项内容不能为空');return;}
 
@@ -1559,11 +1559,11 @@ document.addEventListener('DOMContentLoaded',function(){
   // --- task board delegation ---
   document.querySelector('.kanban').addEventListener('click',function(e){
     var cb=e.target.closest('[data-cb]');
-    if(cb){var cid=parseFloat(cb.getAttribute('data-cb'));if(cid)toggleDone(cid);return;}
+    if(cb){var cid=parseInt(cb.getAttribute('data-cb'),10);if(cid)toggleDone(cid);return;}
     var eb=e.target.closest('[data-edit]');
-    if(eb){var eid=parseFloat(eb.getAttribute('data-edit'));if(eid)openEdit(eid);return;}
+    if(eb){var eid=parseInt(eb.getAttribute('data-edit'),10);if(eid)openEdit(eid);return;}
     var dl=e.target.closest('[data-del]');
-    if(dl){var did=parseFloat(dl.getAttribute('data-del'));if(did)deleteOne(did);return;}
+    if(dl){var did=parseInt(dl.getAttribute('data-del'),10);if(did)deleteOne(did);return;}
   });
 
   // --- edit modal ---
