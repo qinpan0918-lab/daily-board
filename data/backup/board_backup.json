@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-09T11:23:44.250Z",
+  "exported_at": "2026-04-09T11:24:00.487Z",
   "data": {
     "users": [
       {
@@ -10,7 +10,7 @@
         "name": "kris",
         "avatar": "",
         "created_at": "2026-04-08T12:21:00Z",
-        "last_login": "2026-04-09 06:45:02"
+        "last_login": "2026-04-09 11:19:44"
       }
     ],
     "tasks": [
