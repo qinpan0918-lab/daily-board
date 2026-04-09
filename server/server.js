@@ -217,6 +217,23 @@ async function getDB() {
       const buf = fs.readFileSync(DB_PATH);
       db = new SQL.Database(buf);
       console.log('[DB] 从主数据库加载:', DB_PATH);
+      
+      // ⭐ 关键修复：即使本地有数据库文件，也要检查用户表是否有数据
+      // Render 可能保留了空的 board.db 文件（只有表结构没有数据）
+      try {
+        const userCount = db.exec("SELECT COUNT(*) as cnt FROM users")[0]?.values[0]?.[0] || 0;
+        if (userCount === 0) {
+          console.log('[DB] 本地数据库为空（无用户），尝试从 GitHub 远程拉取...');
+          const remoteData = await pullFromGitHub();
+          if (remoteData && remoteData.data && (remoteData.data.users.length > 0 || remoteData.data.tasks.length > 0)) {
+            importRemoteData(db, remoteData);
+            fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
+            console.log('[DB] ✅ 从 GitHub 远程恢复成功！（覆盖空库）');
+          }
+        }
+      } catch(e) {
+        console.warn('[DB] 检查用户数失败:', e.message);
+      }
     } else {
       // 主数据库不存在 → 尝试本地备份
       let localBuf = restoreFromLocalBackup();
@@ -230,18 +247,8 @@ async function getDB() {
         const remoteData = await pullFromGitHub();
         if (remoteData && remoteData.data && (remoteData.data.users.length > 0 || remoteData.data.tasks.length > 0)) {
           db = new SQL.Database();
-          // 建表
           createTables(db);
-          // 导入用户数据
-          for (const user of remoteData.data.users) {
-            db.run(`INSERT OR IGNORE INTO users (id, email, password, name, avatar, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-              [user.id, user.email, user.password, user.name || '', user.avatar || '', user.created_at, user.last_login]);
-          }
-          // 导入任务数据
-          for (const task of remoteData.data.tasks) {
-            db.run(`INSERT OR IGNORE INTO tasks (id, user_id, title, category, done, start_time, end_time, task_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [task.id, task.user_id, task.title, task.category || '工作', task.done || 0, task.start_time, task.end_time, task.task_date, task.created_at, task.updated_at]);
-          }
+          importRemoteData(db, remoteData);
           fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
           console.log('[DB] ✅ 从 GitHub 远程恢复成功！数据已写入主数据库');
         } else {
@@ -324,6 +331,20 @@ function createTables(db) {
   `);
 
   db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, task_date)`);
+}
+
+// 从远程备份数据导入到数据库（复用逻辑）
+function importRemoteData(db, remoteData) {
+  // 导入用户数据
+  for (const user of remoteData.data.users) {
+    db.run(`INSERT OR REPLACE INTO users (id, email, password, name, avatar, created_at, last_login) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [user.id, user.email, user.password, user.name || '', user.avatar || '', user.created_at, user.last_login]);
+  }
+  // 导入任务数据
+  for (const task of remoteData.data.tasks) {
+    db.run(`INSERT OR REPLACE INTO tasks (id, user_id, title, category, done, start_time, end_time, task_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [task.id, task.user_id, task.title, task.category || '工作', task.done || 0, task.start_time, task.end_time, task.task_date, task.created_at, task.updated_at]);
+  }
 }
 
 // Helper: run a query and return results as array of objects

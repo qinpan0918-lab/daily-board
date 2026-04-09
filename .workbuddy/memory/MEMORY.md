@@ -18,8 +18,15 @@
 - **Render 免费版部署限制**：
   - 文件系统只读（Read-only file system），不能用 apt-get install
   - 不支持 better-sqlite3 等 C++ 原生 Node 模块
-  - 解决方案：用 sql.js（纯 JS WASM 实现）替代
+  - **不支持 Persistent Disk（仅付费版支持）**——这是数据反复丢失的根本原因
+  - 解决方案：用 sql.js（纯 JS WASM 实现）替代数据库驱动
+  - 数据持久化方案：GitHub Contents API 远程备份（每5分钟推送到仓库，启动时自动拉取恢复）
   - Docker 模式需要在创建服务时选择，中途不能从 Node 切换为 Docker
+
+### 看板账号信息
+- **930470286@qq.com** / 密码 **kris2026**
+- 用户名：kris，user_id: 1
+- ⚠️ 该账号已多次被 Render 重部署清除，依赖 GitHub 远程备份恢复
 
 ## 标准部署流程（SOP 要点）
 1. package.json 必须放根目录（含 dependencies + start script）
