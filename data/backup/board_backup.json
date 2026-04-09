@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-09T03:58:19.020Z",
+  "exported_at": "2026-04-09T03:58:59.717Z",
   "data": {
     "users": [
       {
@@ -10,9 +10,94 @@
         "name": "kris",
         "avatar": "",
         "created_at": "2026-04-08T12:21:00Z",
-        "last_login": "2026-04-09 03:54:53"
+        "last_login": "2026-04-09 03:55:56"
       }
     ],
-    "tasks": []
+    "tasks": [
+      {
+        "id": 1,
+        "user_id": 1,
+        "title": "实习计划输出",
+        "category": "工作",
+        "done": 1,
+        "start_time": "09:15",
+        "end_time": "11:30",
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 03:55:46",
+        "updated_at": "2026-04-09 03:55:46"
+      },
+      {
+        "id": 2,
+        "user_id": 1,
+        "title": "参与4月进度会议",
+        "category": "工作",
+        "done": 1,
+        "start_time": "14:00",
+        "end_time": "16:00",
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 03:55:47",
+        "updated_at": "2026-04-09 03:55:47"
+      },
+      {
+        "id": 3,
+        "user_id": 1,
+        "title": "沟通实习生案例",
+        "category": "沟通",
+        "done": 0,
+        "start_time": "10:00",
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 03:55:47",
+        "updated_at": "2026-04-09 03:55:47"
+      },
+      {
+        "id": 4,
+        "user_id": 1,
+        "title": "反馈合规事项",
+        "category": "沟通",
+        "done": 0,
+        "start_time": "10:30",
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 03:55:48",
+        "updated_at": "2026-04-09 03:55:48"
+      },
+      {
+        "id": 5,
+        "user_id": 1,
+        "title": "跟进海外翻译需求事项",
+        "category": "跟进",
+        "done": 0,
+        "start_time": "13:30",
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 03:55:48",
+        "updated_at": "2026-04-09 03:55:48"
+      },
+      {
+        "id": 6,
+        "user_id": 1,
+        "title": "跟进海外翻译研发进度",
+        "category": "跟进",
+        "done": 0,
+        "start_time": "14:30",
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 03:55:48",
+        "updated_at": "2026-04-09 03:55:48"
+      },
+      {
+        "id": 7,
+        "user_id": 1,
+        "title": "测试ai平台事项",
+        "category": "跟进",
+        "done": 0,
+        "start_time": "16:00",
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 03:55:49",
+        "updated_at": "2026-04-09 03:55:49"
+      }
+    ]
   }
 }
