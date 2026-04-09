@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-09T11:13:43.470Z",
+  "exported_at": "2026-04-09T11:14:05.988Z",
   "data": {
     "users": [
       {
@@ -10,21 +10,21 @@
         "name": "kris",
         "avatar": "",
         "created_at": "2026-04-08T12:21:00Z",
-        "last_login": "2026-04-09 11:12:40"
+        "last_login": "2026-04-09 06:45:02"
       }
     ],
     "tasks": [
       {
         "id": 8,
         "user_id": 1,
-        "title": "实习计划输出（已修改）",
+        "title": "实习计划输出",
         "category": "工作",
         "done": 1,
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
         "created_at": "2026-04-09 06:45:05",
-        "updated_at": "2026-04-09 11:12:41"
+        "updated_at": "2026-04-09 06:45:05"
       },
       {
         "id": 9,
@@ -101,26 +101,14 @@
       {
         "id": 15,
         "user_id": 1,
-        "title": "测试不存在",
+        "title": "初次反馈合规+人数，待2次反馈",
         "category": "工作",
         "done": 0,
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-09",
         "created_at": "2026-04-09 06:50:44",
-        "updated_at": "2026-04-09 11:12:41"
-      },
-      {
-        "id": 16,
-        "user_id": 1,
-        "title": "ai数据看板",
-        "category": "工作",
-        "done": 0,
-        "start_time": "",
-        "end_time": "",
-        "task_date": "2026-04-09",
-        "created_at": "2026-04-09 11:12:07",
-        "updated_at": "2026-04-09 11:12:25"
+        "updated_at": "2026-04-09 06:50:44"
       }
     ]
   }
