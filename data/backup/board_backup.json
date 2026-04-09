@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-09T06:45:49.897Z",
+  "exported_at": "2026-04-09T06:45:56.346Z",
   "data": {
     "users": [
       {
@@ -10,93 +10,93 @@
         "name": "kris",
         "avatar": "",
         "created_at": "2026-04-08T12:21:00Z",
-        "last_login": "2026-04-09 06:45:49"
+        "last_login": "2026-04-09 03:54:53"
       }
     ],
     "tasks": [
       {
-        "id": 8,
+        "id": 1,
         "user_id": 1,
-        "title": "实习计划输出",
+        "title": "完成反作弊系统PRD初稿评审",
         "category": "工作",
-        "done": 1,
+        "done": 0,
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
-        "created_at": "2026-04-09 06:45:05",
-        "updated_at": "2026-04-09 06:45:05"
+        "created_at": "2026-04-09 04:03:35",
+        "updated_at": "2026-04-09 04:03:35"
       },
       {
-        "id": 9,
+        "id": 2,
         "user_id": 1,
-        "title": "参与4月进度会议",
+        "title": "与后端团队对齐API接口定义",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:35",
+        "updated_at": "2026-04-09 04:03:35"
+      },
+      {
+        "id": 3,
+        "user_id": 1,
+        "title": "整理竞品分析报告",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:35",
+        "updated_at": "2026-04-09 04:03:35"
+      },
+      {
+        "id": 4,
+        "user_id": 1,
+        "title": "更新项目进度文档",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-08",
+        "created_at": "2026-04-09 04:03:36",
+        "updated_at": "2026-04-09 04:03:36"
+      },
+      {
+        "id": 5,
+        "user_id": 1,
+        "title": "参加产品周会",
         "category": "会议",
-        "done": 1,
+        "done": 0,
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
-        "created_at": "2026-04-09 06:45:05",
-        "updated_at": "2026-04-09 06:45:05"
+        "created_at": "2026-04-09 04:03:36",
+        "updated_at": "2026-04-09 04:03:36"
       },
       {
-        "id": 10,
+        "id": 6,
         "user_id": 1,
-        "title": "沟通实习生案例",
+        "title": "审核UI设计稿V2版本",
         "category": "工作",
         "done": 0,
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
-        "created_at": "2026-04-09 06:45:06",
-        "updated_at": "2026-04-09 06:45:06"
+        "created_at": "2026-04-09 04:03:36",
+        "updated_at": "2026-04-09 04:03:36"
       },
       {
-        "id": 11,
+        "id": 7,
         "user_id": 1,
-        "title": "反馈合规事项",
+        "title": "回复客户需求确认邮件",
         "category": "工作",
         "done": 0,
         "start_time": null,
         "end_time": null,
         "task_date": "2026-04-08",
-        "created_at": "2026-04-09 06:45:07",
-        "updated_at": "2026-04-09 06:45:07"
-      },
-      {
-        "id": 12,
-        "user_id": 1,
-        "title": "跟进海外翻译需求事项",
-        "category": "工作",
-        "done": 0,
-        "start_time": null,
-        "end_time": null,
-        "task_date": "2026-04-08",
-        "created_at": "2026-04-09 06:45:07",
-        "updated_at": "2026-04-09 06:45:07"
-      },
-      {
-        "id": 13,
-        "user_id": 1,
-        "title": "跟进海外翻译研发进度",
-        "category": "工作",
-        "done": 0,
-        "start_time": null,
-        "end_time": null,
-        "task_date": "2026-04-08",
-        "created_at": "2026-04-09 06:45:07",
-        "updated_at": "2026-04-09 06:45:07"
-      },
-      {
-        "id": 14,
-        "user_id": 1,
-        "title": "测试ai平台事项",
-        "category": "工作",
-        "done": 0,
-        "start_time": null,
-        "end_time": null,
-        "task_date": "2026-04-08",
-        "created_at": "2026-04-09 06:45:07",
-        "updated_at": "2026-04-09 06:45:07"
+        "created_at": "2026-04-09 04:03:37",
+        "updated_at": "2026-04-09 04:03:37"
       }
     ]
   }
