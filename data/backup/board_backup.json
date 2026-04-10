@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-10T02:21:16.199Z",
+  "exported_at": "2026-04-10T08:38:17.713Z",
   "data": {
     "users": [
       {
@@ -121,8 +121,8 @@
         "start_time": "",
         "end_time": "",
         "task_date": "2026-04-09",
-        "start_date": "2026-04-08",
-        "end_date": "2026-04-15",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-09 06:50:44",
         "updated_at": "2026-04-10 01:54:09"
       },
