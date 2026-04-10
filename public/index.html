@@ -270,6 +270,38 @@ body {
   border-left: 3px solid var(--accent);
   background: linear-gradient(135deg, var(--bg) 0%, rgba(108,140,255,0.06) 100%);
 }
+/* 跨天长条样式 — 合并为整体 */
+.task-item.multi-bar {
+  border-left: 4px solid #a78bfa;
+  background: linear-gradient(135deg, rgba(167,139,250,0.08) 0%, rgba(108,140,255,0.05) 100%);
+  border-radius: 10px; padding: 14px 18px;
+  position: relative; overflow: hidden;
+}
+.task-item.multi-bar::after {
+  content: ''; position: absolute; top: 0; bottom: 0;
+  left: 4px; right: 0;
+  border-radius: 0 8px 8px 0;
+  pointer-events: none;
+}
+.task-item.multi-bar .task-title { font-weight: 600; }
+.multi-bar-range {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 6px; padding: 5px 10px; border-radius: 6px;
+  background: rgba(167,139,250,0.12); font-size: 12px;
+  color: #a78bfa; font-weight: 600; white-space: nowrap;
+}
+.multi-bar-days {
+  display: flex; gap: 3px; margin-top: 7px; flex-wrap: wrap;
+}
+.multi-bar-day-dot {
+  width: 22px; height: 22px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; flex-shrink: 0;
+  background: var(--card); border: 1px solid var(--border); color: var(--text-dim);
+}
+.multi-bar-day-dot.day-start { background: rgba(108,140,255,0.15); border-color: var(--accent); color: var(--accent); }
+.multi-bar-day-dot.day-end { background: rgba(167,139,250,0.15); border-color: #a78bfa; color: #a78bfa; }
+.multi-bar-day-dot.day-active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
 .tag-range {
   background: linear-gradient(135deg, rgba(108,140,255,0.15), rgba(167,139,250,0.1));
   color: #a78bfa;
@@ -423,6 +455,40 @@ body {
   transition: all 0.2s; -webkit-appearance: none;
 }
 .date-nav button:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ====== Week Date Bar (常驻快速选日期) ====== */
+.week-bar {
+  display: flex; gap: 4px; margin-top: 8px;
+  padding: 8px 12px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 10px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.week-bar::-webkit-scrollbar { height: 3px; }
+.week-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.week-day-btn {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 10px; min-width: 52px; border-radius: 8px;
+  border: 1px solid transparent; background: transparent;
+  color: var(--text-dim); cursor: pointer;
+  font-family: inherit; transition: all 0.15s; flex-shrink: 0;
+  -webkit-appearance: none;
+}
+.week-day-btn .wd-dow { font-size: 10px; font-weight: 600; opacity: 0.7; margin-bottom: 2px; }
+.week-day-btn .wd-date { font-size: 14px; font-weight: 700; }
+.week-day-btn:hover { background: rgba(108,140,255,0.08); color: var(--text); border-color: var(--border); }
+.week-day-btn.active {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+  box-shadow: 0 2px 10px var(--accent-glow);
+}
+.week-day-btn.active .wd-dow { opacity: 1; }
+.week-day-btn.is-today { border-color: var(--done); }
+.week-day-btn.is-today:not(.active) { background: rgba(61,214,140,0.08); color: var(--done); }
+.week-day-btn .wd-dot {
+  width: 5px; height: 5px; border-radius: 50%; margin-top: 3px;
+  background: transparent;
+}
+.week-day-btn.has-task .wd-dot { background: var(--pending); }
+.week-day-btn.has-done .wd-dot { background: var(--done); }
 
 /* ====== View Tabs ====== */
 .view-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
@@ -609,6 +675,8 @@ body {
       <button data-action="nextDay">▶</button>
     </div>
   </div>
+  <!-- 常驻周日期快速选择条 -->
+  <div class="week-bar" id="weekBar"></div>
   <div class="header-actions">
     <div class="user-info" id="userInfo">
       <span class="user-avatar" id="userAvatar">?</span>
@@ -1188,7 +1256,19 @@ function loadGlobalTasks(callback) {
 // ============================================================
 function render() {
   var dk = getDayKey(currentDate);
-  var list = tasksCache[dk] || [];
+  var rawList = tasksCache[dk] || [];
+
+  // 跨天任务去重：只在 start_date 当天渲染为长条，其他天不重复展示
+  var seenIds = {};
+  var list = rawList.filter(function(t) {
+    if (t.start_date && t.end_date) {
+      if (seenIds[t.id]) return false;
+      // 只在起始日展示（非中间覆盖日）
+      if (t.task_date !== t.start_date) { seenIds[t.id] = true; return false; }
+      seenIds[t.id] = true;
+    }
+    return true;
+  });
   var pending = list.filter(function(t){ return !t.done; });
   var done = list.filter(function(t){ return t.done; });
 
@@ -1212,6 +1292,8 @@ function render() {
   document.getElementById('doneList').innerHTML = done.length
     ? done.map(taskHTML).join('')
     : '<div class="empty-state"><div class="icon">✨</div>还没有已完成事项</div>';
+
+  renderWeekBar();
 }
 
 var CAT_ICONS = {'工作':'📌','沟通':'💬','跟进':'🔍','学习':'📚','生活':'🏠','其他':'📎'};
@@ -1228,14 +1310,35 @@ function taskHTML(t) {
   // 跨天标记
   var isMultiDay = t.start_date && t.end_date;
   var rangeTag = '';
-  var multiClass = isMultiDay ? ' multi-day' : '';
+  var multiClass = isMultiDay ? ' multi-bar' : ''; // 用 multi-bar 长条样式替代 multi-day
+  
   if (isMultiDay) {
     var sd=new Date(t.start_date+'T12:00:00'), ed=new Date(t.end_date+'T12:00:00');
     var days=Math.round((ed-sd)/(86400000))+1;
-    rangeTag='<span class="tag tag-range">📅 '+t.start_date.slice(5)+' ~ '+t.end_date.slice(5)+'（'+days+'天）</span>';
+    
+    // 构建每日小圆点条
+    var dotsHtml='<div class="multi-bar-days">';
+    var cur=new Date(sd);
+    var dk=getDayKey(currentDate);
+    while(cur<=ed){
+      var cd=getDayKey(cur);
+      var dotCls='multi-bar-day-dot';
+      if(cd===t.start_date)dotCls+=' day-start';
+      if(cd===t.end_date)dotCls+=' day-end';
+      if(cd===dk)dotCls+=' day-active';
+      dotsHtml+='<span class="'+dotCls+'">'+cur.getDate()+'</span>';
+      cur.setDate(cur.getDate()+1);
+    }
+    dotsHtml+='</div>';
+    
+    rangeTag=
+      '<div class="multi-bar-range">📅 '+t.start_date.slice(5)+' ~ '+t.end_date.slice(5)+'（'+days+'天）</div>'+
+      dotsHtml;
+  } else {
+    rangeTag = '';
   }
   
-  return '<div class="task-item'+(t.done?' done':'')+multiClass+'" data-id="'+t.id+'">' +
+  return '<div class="task-item'+(t.done?' done':'')+multiClass+'" data-id="'+t.id+'">'+
     '<div class="task-top">'+
       '<div class="task-checkbox'+(t.done?' checked':'')+'" data-cb="'+t.id+'">'+(t.done?'&#10003;':'')+'</div>'+
       '<span class="task-title">'+escHtml(t.title)+'</span>'+
@@ -1461,6 +1564,41 @@ function handleImportAll(){
 function changeDay(delta){currentDate.setDate(currentDate.getDate()+delta);loadTasksAndRender();}
 function goToday(){currentDate=new Date();loadTasksAndRender();}
 
+// ============================================================
+//  WEEK BAR (常驻快速选日期)
+// ============================================================
+var WEEK_DOWS=['日','一','二','三','四','五','六'];
+
+function renderWeekBar(){
+  var bar=document.getElementById('weekBar');
+  if(!bar)return;
+  // 以当前日期所在周为中心，显示前后各2天（共9天或取整周）
+  var today=new Date();
+  var todayStr=getDayKey(today);
+  var curStr=getDayKey(currentDate);
+  // 算出当前周的周一
+  var dow=currentDate.getDay();
+  var mon=new Date(currentDate);mon.setDate(currentDate.getDate()-dow);
+  // 显示周一~周日 + 前后各延伸几天，共展示11天（上周五~下周二）
+  var start=new Date(mon);start.setDate(mon.getDate()-3);
+  var html='';
+  for(var i=0;i<11;i++){
+    var d=new Date(start);d.setDate(start.getDate()+i);
+    var dk=getDayKey(d);
+    var isToday=(dk===todayStr);
+    var isActive=(dk===curStr);
+    var list=tasksCache[dk]||[];
+    var hasPending=list.some(function(t){return!t.done;});
+    var hasDone=list.some(function(t){return t.done;});
+    html+='<button class="week-day-btn'+(isActive?' active':'')+(isToday?' is-today':'')+(hasPending?' has-task':'')+(hasDone&&!hasPending?' has-done':'')+'" data-godate="'+dk+'">'+
+      '<span class="wd-dow">周'+WEEK_DOWS[d.getDay()]+'</span>'+
+      '<span class="wd-date">'+d.getDate()+'</span>'+
+      '<span class="wd-dot"></span>'+
+    '</button>';
+  }
+  bar.innerHTML=html;
+}
+
 
 // ============================================================
 //  EXPORT
@@ -1629,6 +1767,14 @@ document.addEventListener('DOMContentLoaded',function(){
       var ia=document.getElementById('importArea');ia.classList.toggle('visible');
       if(ia.classList.contains('visible'))document.getElementById('importTextarea').focus();
     }
+  });
+
+  // --- week bar 快速选日期 ---
+  document.getElementById('weekBar').addEventListener('click',function(e){
+    var btn=e.target.closest('[data-godate]');
+    if(!btn)return;
+    var dk=btn.getAttribute('data-godate');
+    if(dk){currentDate=new Date(dk+'T12:00:00');loadTasksAndRender();}
   });
 
   // --- user dropdown ---
