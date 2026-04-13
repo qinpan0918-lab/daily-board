@@ -689,6 +689,8 @@ body {
       <div class="user-dropdown" id="userDropdown">
         <button disabled style="color:var(--text-dim);font-size:12px;">👤 <span id="dropdownEmail"></span></button>
         <div class="dropdown-divider"></div>
+        <button data-action="openChangePwd">🔑 修改密码</button>
+        <div class="dropdown-divider"></div>
         <button class="logout-btn" data-action="logout">🚪 退出登录</button>
       </div>
     </div>
@@ -867,6 +869,30 @@ placeholder="示例 — 粘贴以下格式即可自动识别：
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
   <div class="loading-text">加载中...</div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="changePwdModal">
+  <div class="edit-box" style="width:400px;">
+    <h3>🔑 修改密码</h3>
+    <div class="edit-field">
+      <label>当前密码</label>
+      <input type="password" id="oldPwdInput" placeholder="请输入当前密码" autocomplete="current-password">
+    </div>
+    <div class="edit-field">
+      <label>新密码（至少6位）</label>
+      <input type="password" id="newPwdInput" placeholder="请输入新密码" autocomplete="new-password" minlength="6">
+    </div>
+    <div class="edit-field">
+      <label>确认新密码</label>
+      <input type="password" id="confirmPwdInput" placeholder="再次输入新密码" autocomplete="new-password">
+    </div>
+    <p id="changePwdError" style="color:var(--danger);font-size:13px;min-height:20px;margin:0 0 12px;"></p>
+    <div class="edit-actions">
+      <button class="btn" id="cancelPwdBtn">取消</button>
+      <button class="btn btn-primary" id="savePwdBtn">💾 确认修改</button>
+    </div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -1604,6 +1630,55 @@ function renderWeekBar(){
 
 
 // ============================================================
+//  CHANGE PASSWORD
+// ============================================================
+function openChangePwd(){
+  document.getElementById('oldPwdInput').value='';
+  document.getElementById('newPwdInput').value='';
+  document.getElementById('confirmPwdInput').value='';
+  document.getElementById('changePwdError').textContent='';
+  document.getElementById('changePwdModal').classList.add('active');
+  document.getElementById('userDropdown').classList.remove('show');
+  setTimeout(function(){document.getElementById('oldPwdInput').focus();},100);
+}
+function closeChangePwd(){
+  document.getElementById('changePwdModal').classList.remove('active');
+}
+async function submitChangePwd(){
+  var oldPwd=document.getElementById('oldPwdInput').value.trim();
+  var newPwd=document.getElementById('newPwdInput').value.trim();
+  var confirmPwd=document.getElementById('confirmPwdInput').value.trim();
+  var errEl=document.getElementById('changePwdError');
+  errEl.textContent='';
+
+  if(!oldPwd){errEl.textContent='请输入当前密码';return;}
+  if(!newPwd||newPwd.length<6){errEl.textContent='新密码至少6个字符';return;}
+  if(newPwd!==confirmPwd){errEl.textContent='两次输入的新密码不一致';return;}
+  if(oldPwd===newPwd){errEl.textContent='新密码不能与旧密码相同';return;}
+
+  var btn=document.getElementById('savePwdBtn');
+  btn.disabled=true;btn.textContent='修改中...';
+
+  try{
+    var resp=await fetch(API_BASE+'/api/auth/change-password',{
+      method:'PUT',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem(TOKEN_KEY)},
+      body:JSON.stringify({oldPassword:oldPwd,newPassword:newPwd})
+    });
+    var data=await resp.json();
+    if(!resp.ok){errEl.textContent=data.error||'修改失败';return;}
+    // 更新 token
+    if(data.token)localStorage.setItem(TOKEN_KEY,data.token);
+    closeChangePwd();
+    showToast('✅ 密码修改成功');
+  }catch(e){
+    errEl.textContent='网络错误，请重试';
+  }finally{
+    btn.disabled=false;btn.textContent='💾 确认修改';
+  }
+}
+
+// ============================================================
 //  EXPORT
 // ============================================================
 function openExport(){document.getElementById('exportModal').classList.add('active');buildPreview('md');}
@@ -1765,6 +1840,7 @@ document.addEventListener('DOMContentLoaded',function(){
     else if(act==='todayBtn')goToday();
     else if(act==='focusInput')document.getElementById('taskInput').focus();
     else if(act==='openExport')openExport();
+    else if(act==='openChangePwd')openChangePwd();
     else if(act==='clearDone')clearAllDone();
     else if(act==='toggleImport'){
       var ia=document.getElementById('importArea');ia.classList.toggle('visible');
@@ -1889,6 +1965,12 @@ document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('editCancelBtn').addEventListener('click',function(){closeEdit();});
   document.getElementById('editModal').addEventListener('click',function(e){if(e.target===this)closeEdit();});
   document.getElementById('editTitle').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();saveEdit();}if(e.key==='Escape')closeEdit();});
+
+  // --- change password modal ---
+  document.getElementById('cancelPwdBtn').addEventListener('click',closeChangePwd);
+  document.getElementById('savePwdBtn').addEventListener('click',submitChangePwd);
+  document.getElementById('changePwdModal').addEventListener('click',function(e){if(e.target===this)closeChangePwd();});
+  document.getElementById('confirmPwdInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submitChangePwd();}});
 
   // --- export modal ---
   document.getElementById('copyMdBtn').addEventListener('click',function(){var txt=buildPreview('md');copyToClipboard(txt);toast('Markdown 已复制 ✓');});

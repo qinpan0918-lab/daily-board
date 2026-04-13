@@ -297,6 +297,52 @@ app.get('/api/auth/me', async (req, res) => {
 });
 
 
+// PUT /api/auth/change-password — 修改密码
+app.put('/api/auth/change-password', async (req, res) => {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: '未登录，请先登录' });
+  }
+  try {
+    const token = header.split(' ')[1];
+    const payload = jwt.verify(token, JWT_SECRET);
+    const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: '请填写旧密码和新密码' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: '新密码至少6个字符' });
+    }
+
+    const db = await getDB();
+    const user = queryGet(db, 'SELECT * FROM users WHERE id = ?', [payload.userId]);
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+
+    const match = await bcrypt.compare(oldPassword, user.password);
+    if (!match) {
+      return res.status(401).json({ error: '旧密码不正确' });
+    }
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    queryRun(db, 'UPDATE users SET password = ? WHERE id = ?', [hash, user.id]);
+
+    // 签发新 token
+    const newToken = jwt.sign(
+      { userId: user.id, email: user.email, name: user.name || '' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({ message: '密码修改成功', token: newToken });
+  } catch (e) {
+    return res.status(401).json({ error: '登录已过期，请重新登录' });
+  }
+});
+
+
 // Auth Middleware for task APIs
 async function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
