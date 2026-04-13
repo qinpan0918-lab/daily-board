@@ -971,7 +971,7 @@ app.get('/api/backup-status', authMiddleware, async (req, res) => {
 // ============================================================
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString(), version: '2.0.0' });
+  res.json({ status: 'ok', time: new Date().toISOString(), version: '2.0.0', dbReady: !!dbPromise });
 });
 
 // Serve static frontend in production
@@ -982,16 +982,24 @@ app.get('*', (req, res) => {
 });
 
 // ---- Start ----
-getDB().then(() => {
-  app.listen(PORT, () => {
-    console.log('');
-    console.log('╔══════════════════════════════════════╗');
-    console.log('║  🌐 海外云智服每日看板 - 服务端启动     ║');
-    console.log('╠══════════════════════════════════════╣');
-    console.log(`║  Port:   http://localhost:${PORT}          `);
-    console.log('║  Auth:   JWT Token                      ');
-    console.log('║  DB:     sql.js (pure JS SQLite)         ');
-    console.log('╚══════════════════════════════════════╝');
-    console.log('');
+// ⭐ 关键修复：先启动 HTTP 监听，再初始化数据库
+// Railway/Render 有启动超时限制，如果 DB 初始化（含 GitHub 拉取）太慢，
+// 端口没有及时绑定就会被判定为 "Application failed to respond"
+app.listen(PORT, () => {
+  console.log('');
+  console.log('╔══════════════════════════════════════╗');
+  console.log('║  🌐 海外云智服每日看板 - 服务端启动     ║');
+  console.log('╠══════════════════════════════════════╣');
+  console.log(`║  Port:   http://localhost:${PORT}          `);
+  console.log('║  Auth:   JWT Token                      ');
+  console.log('║  DB:     sql.js (pure JS SQLite)         ');
+  console.log('╚══════════════════════════════════════╝');
+  console.log('');
+
+  // 端口已绑定后，再异步初始化数据库
+  getDB().then(() => {
+    console.log('[STARTUP] 数据库初始化完成，服务就绪');
+  }).catch(err => {
+    console.error('[STARTUP] 数据库初始化失败:', err.message);
   });
 });
