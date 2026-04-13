@@ -98,8 +98,10 @@ body {
 .date-display {
   font-size: 14px; color: var(--text-dim);
   background: var(--card); padding: 6px 14px; border-radius: 20px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border); cursor: pointer;
+  transition: all 0.2s;
 }
+.date-display:hover { border-color: var(--accent); color: var(--accent); }
 .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .user-info {
   display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim);
@@ -174,9 +176,10 @@ body {
 
 /* ====== Date Range (跨天) ====== */
 .date-range-row {
-  display: none; gap: 10px; margin-top: 12px; align-items: center;
+  display: none; gap: 8px; margin-top: 12px; align-items: center;
   padding: 10px 14px; border-radius: 8px;
   background: rgba(108,140,255,0.06); border: 1px dashed var(--accent);
+  flex-wrap: wrap;
 }
 .date-range-row.visible { display: flex; }
 .date-range-row label {
@@ -188,6 +191,7 @@ body {
   border: 1px solid var(--border); background: var(--bg); color: var(--text);
   font-size: 13px; outline: none; transition: all 0.2s;
   -webkit-appearance: none; appearance: none; color-scheme: dark;
+  flex: 1; min-width: 0;
 }
 .date-range-row input[type="date"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .date-toggle {
@@ -356,7 +360,7 @@ body {
 .edit-overlay.active { display: flex; }
 .edit-box {
   background: var(--card); border: 1px solid var(--border);
-  border-radius: 16px; padding: 28px; width: 460px; max-width: 92%;
+  border-radius: 16px; padding: 28px; width: 520px; max-width: 94vw;
 }
 .edit-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
 .edit-field { margin-bottom: 14px; }
@@ -1775,6 +1779,11 @@ document.addEventListener('DOMContentLoaded',function(){
     if(!btn)return;
     var dk=btn.getAttribute('data-godate');
     if(dk){currentDate=new Date(dk+'T12:00:00');loadTasksAndRender();}
+  });
+
+  // --- date display 点击跳转日历视图 ---
+  document.getElementById('dateDisplay').addEventListener('click',function(){
+    switchView('calendar');
   });
 
   // --- user dropdown ---
