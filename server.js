@@ -21,6 +21,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'daily-board-secret-key-2024';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'qinpan0918-lab/daily-board';
 const GITHUB_BACKUP_PATH = 'data/backup/board_backup.json';
+const GITHUB_BACKUP_BRANCH = 'backup';  // 备份推到独立分支，避免触发 Render 构建
 const GITHUB_API_BASE = 'https://api.github.com';
 
 // 数据库路径：本地 data 目录（Render 免费版无持久磁盘）
@@ -184,7 +185,7 @@ async function githubPushJSON(backupData) {
     const contentB64 = Buffer.from(content).toString('base64');
 
     // 先尝试获取现有文件的 SHA（用于更新）
-    const getUrl = `${GITHUB_API_BASE}/repos/${GITHUB_REPO}/contents/${GITHUB_BACKUP_PATH}`;
+    const getUrl = `${GITHUB_API_BASE}/repos/${GITHUB_REPO}/contents/${GITHUB_BACKUP_PATH}?ref=${GITHUB_BACKUP_BRANCH}`;
     const getRes = await fetch(getUrl, {
       headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'User-Agent': 'daily-board' }
     });
@@ -198,7 +199,8 @@ async function githubPushJSON(backupData) {
     const putUrl = `${GITHUB_API_BASE}/repos/${GITHUB_REPO}/contents/${GITHUB_BACKUP_PATH}`;
     const body = {
       message: `[auto-backup] ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`,
-      content: contentB64
+      content: contentB64,
+      branch: GITHUB_BACKUP_BRANCH
     };
     if (sha) body.sha = sha;
 
@@ -236,7 +238,7 @@ async function pullFromGitHub() {
   }
 
   try {
-    const url = `${GITHUB_API_BASE}/repos/${GITHUB_REPO}/contents/${GITHUB_BACKUP_PATH}`;
+    const url = `${GITHUB_API_BASE}/repos/${GITHUB_REPO}/contents/${GITHUB_BACKUP_PATH}?ref=${GITHUB_BACKUP_BRANCH}`;
     const res = await fetch(url, {
       headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'User-Agent': 'daily-board' }
     });
