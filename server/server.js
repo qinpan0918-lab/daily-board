@@ -578,6 +578,49 @@ app.get('/api/auth/me', async (req, res) => {
 });
 
 
+// PUT /api/auth/change-password — 修改密码
+app.put('/api/auth/change-password', async (req, res) => {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: '未登录，请先登录' });
+  }
+  try {
+    const token = header.split(' ')[1];
+    const payload = jwt.verify(token, JWT_SECRET);
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: '请输入当前密码和新密码' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: '新密码至少 6 位' });
+    }
+    const db = await getDB();
+    const user = queryGet(db, 'SELECT * FROM users WHERE id = ?', [payload.userId]);
+    if (!user) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+    const match = await bcrypt.compare(oldPassword, user.password);
+    if (!match) {
+      return res.status(400).json({ error: '当前密码不正确' });
+    }
+    const hash = await bcrypt.hash(newPassword, 10);
+    queryRun(db, 'UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [hash, user.id]);
+    // 同步更新种子账号 hash（如果是种子账号改密码）
+    if (user.email === SEED_ACCOUNT.email) {
+      SEED_ACCOUNT.passwordHash = hash;
+    }
+    const newToken = jwt.sign(
+      { userId: user.id, email: user.email, name: user.name || '' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res.json({ message: '密码修改成功', token: newToken });
+  } catch (e) {
+    return res.status(401).json({ error: '登录已过期，请重新登录' });
+  }
+});
+
+
 // Auth Middleware for task APIs
 async function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
