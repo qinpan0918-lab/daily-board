@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-13T01:47:23.888Z",
+  "exported_at": "2026-04-13T01:52:23.890Z",
   "data": {
     "users": [
       {
@@ -153,6 +153,34 @@
         "end_date": "2026-04-15",
         "created_at": "2026-04-13 01:45:52",
         "updated_at": "2026-04-13 01:46:01"
+      },
+      {
+        "id": 18,
+        "user_id": 1,
+        "title": "推进PUBGM大模型接口申请事项",
+        "category": "工作",
+        "done": 0,
+        "start_time": "",
+        "end_time": "",
+        "task_date": "2026-04-13",
+        "start_date": null,
+        "end_date": null,
+        "created_at": "2026-04-13 01:51:37",
+        "updated_at": "2026-04-13 01:51:49"
+      },
+      {
+        "id": 19,
+        "user_id": 1,
+        "title": "跟进海外合规事项",
+        "category": "工作",
+        "done": 0,
+        "start_time": null,
+        "end_time": null,
+        "task_date": "2026-04-13",
+        "start_date": null,
+        "end_date": null,
+        "created_at": "2026-04-13 01:52:06",
+        "updated_at": "2026-04-13 01:52:06"
       }
     ]
   }
