@@ -1775,12 +1775,12 @@ function switchView(view){
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-view')===view);});
   document.getElementById('kanbanWrap').classList.toggle('hidden',view!=='kanban');
   document.getElementById('calendarView').classList.toggle('active',view==='calendar');
-  if(view==='calendar'){loadGlobalTasks(renderCalendar);}
+  if(view==='calendar'){loadGlobalTasks(renderGlobalCalendar);}
 }
 
-function changeMonth(delta){calMonth.setMonth(calMonth.getMonth()+delta);renderCalendar();}
+function changeMonth(delta){calMonth.setMonth(calMonth.getMonth()+delta);renderGlobalCalendar();}
 
-function renderCalendar(){
+function renderGlobalCalendar(){
   var year=calMonth.getFullYear(),month=calMonth.getMonth();
   document.getElementById('calMonthLabel').textContent=year+'年'+(month+1)+'月';
   var firstDay=new Date(year,month,1),lastDay=new Date(year,month+1,0);
