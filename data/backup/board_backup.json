@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-14T02:03:52.104Z",
+  "exported_at": "2026-04-14T02:08:22.101Z",
   "data": {
     "users": [
       {
@@ -149,10 +149,10 @@
         "start_time": "",
         "end_time": "19:31",
         "task_date": "2026-04-13",
-        "start_date": null,
-        "end_date": null,
+        "start_date": "2026-04-13",
+        "end_date": "2026-04-15",
         "created_at": "2026-04-13 01:45:52",
-        "updated_at": "2026-04-13 11:31:36"
+        "updated_at": "2026-04-14 02:07:32"
       },
       {
         "id": 18,
@@ -163,10 +163,10 @@
         "start_time": "",
         "end_time": "",
         "task_date": "2026-04-13",
-        "start_date": null,
-        "end_date": null,
+        "start_date": "2026-04-13",
+        "end_date": "2026-04-24",
         "created_at": "2026-04-13 01:51:37",
-        "updated_at": "2026-04-13 01:51:49"
+        "updated_at": "2026-04-14 02:06:43"
       },
       {
         "id": 19,
@@ -177,10 +177,10 @@
         "start_time": "",
         "end_time": "",
         "task_date": "2026-04-13",
-        "start_date": null,
-        "end_date": null,
+        "start_date": "2026-04-14",
+        "end_date": "2026-04-17",
         "created_at": "2026-04-13 01:52:06",
-        "updated_at": "2026-04-13 11:30:38"
+        "updated_at": "2026-04-14 02:07:44"
       }
     ]
   }
