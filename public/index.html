@@ -738,8 +738,7 @@ body {
       <input type="time" id="endTime" value="">
       <span style="font-size:11px;color:var(--text-dim);margin-left:4px;">（选填）</span>
     </div>
-    <div style="margin-top:10px;font-size:12px;color:var(--accent);font-weight:600;">📅 跨天事项（选填，持续多天/周）</div>
-    <div class="date-range-row visible" id="dateRangeRow">
+    <div class="date-range-row visible" id="dateRangeRow" style="border-style:solid;">
       <label>📅 开始日期</label>
       <input type="date" id="startDate" />
       <span style="color:var(--text-dim);font-size:12px;">→</span>
@@ -1422,12 +1421,14 @@ function handleAddSingle() {
   api('POST', '/tasks', {title:val, category:cat, startTime:st, endTime:et, date:dk, startDate:sd, endDate:ed})
     .then(function(data){
       input.value='';
-      document.getElementById('startTime').value='';
+      // 重置发起时间为当前时间
+      var _n=new Date();document.getElementById('startTime').value=('0'+_n.getHours()).slice(-2)+':'+('0'+_n.getMinutes()).slice(-2);
       document.getElementById('endTime').value='';
-      document.getElementById('startDate').value='';
-      document.getElementById('endDate').value='';
-      document.getElementById('rangeHint').textContent='';
-      document.getElementById('dateRangeRow').classList.remove('visible');
+      // 重置日期为今天（保持可见）
+      var _dk=getDayKey(currentDate);
+      document.getElementById('startDate').value=_dk;
+      document.getElementById('endDate').value=_dk;
+      updateRangeHint();
       input.focus();
       tasksCache[dk].push(data.task);
       render();
@@ -1936,6 +1937,15 @@ document.addEventListener('DOMContentLoaded',function(){
       if(days>0)hint.textContent='共 '+days+' 天';else hint.textContent='结束日期需≥开始日期';
     }else{hint.textContent='';}
   }
+  // 初始化默认值：发起时间=现在，开始/结束日期=今天
+  (function initAddDefaults(){
+    var now=new Date();
+    document.getElementById('startTime').value=('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+    var dk=getDayKey(currentDate);
+    document.getElementById('startDate').value=dk;
+    document.getElementById('endDate').value=dk;
+    updateRangeHint();
+  })();
   function updateEditRangeHint(){
     var sd=document.getElementById('editStartDate').value;
     var ed=document.getElementById('editEndDate').value;
