@@ -1,0 +1,9 @@
+node_modules
+.git
+.gitignore
+.workbuddy
+*.md
+render.yaml
+Procfile
+daily-board.html
+server/
