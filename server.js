@@ -980,7 +980,15 @@ app.get('/api/backup-status', authMiddleware, async (req, res) => {
 // ============================================================
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString(), version: '2.0.0', dbReady: !!dbPromise });
+  res.json({
+    status: 'ok',
+    time: new Date().toISOString(),
+    version: '2.0.1',
+    dbReady: !!dbPromise,
+    githubToken: GITHUB_TOKEN ? 'configured (' + GITHUB_TOKEN.slice(0, 6) + '...)' : 'NOT SET',
+    githubRepo: GITHUB_REPO,
+    backupBranch: GITHUB_BACKUP_BRANCH
+  });
 });
 
 // Serve static frontend in production
