@@ -980,14 +980,19 @@ app.get('/api/backup-status', authMiddleware, async (req, res) => {
 // ============================================================
 
 app.get('/api/health', (req, res) => {
+  // 诊断：列出所有 GITHUB 开头的环境变量 key（不暴露 value）
+  const githubEnvKeys = Object.keys(process.env).filter(k => k.toUpperCase().includes('GITHUB'));
+  const allEnvKeys = Object.keys(process.env).sort();
   res.json({
     status: 'ok',
     time: new Date().toISOString(),
-    version: '2.0.1',
+    version: '2.0.2',
     dbReady: !!dbPromise,
-    githubToken: GITHUB_TOKEN ? 'configured (' + GITHUB_TOKEN.slice(0, 6) + '...)' : 'NOT SET',
-    githubRepo: GITHUB_REPO,
-    backupBranch: GITHUB_BACKUP_BRANCH
+    githubTokenFromEnv: process.env.GITHUB_TOKEN ? 'YES (' + process.env.GITHUB_TOKEN.slice(0, 6) + '...)' : 'NOT IN process.env',
+    githubTokenVar: GITHUB_TOKEN ? 'YES' : 'EMPTY',
+    githubEnvKeys: githubEnvKeys,
+    envKeyCount: allEnvKeys.length,
+    envKeySample: allEnvKeys.slice(0, 30)
   });
 });
 
