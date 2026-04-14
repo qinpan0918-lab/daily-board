@@ -4,6 +4,7 @@
 //  改用 sql.js 避免原生模块编译问题，兼容 Render 免费版
 //  数据持久化：GitHub 远程备份（解决免费版无 disk 问题）
 // ============================================================
+console.log('[BOOT] Process starting, PORT=' + (process.env.PORT || '3000 (default)'), 'NODE_ENV=' + (process.env.NODE_ENV || 'unset'));
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
