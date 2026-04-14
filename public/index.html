@@ -1306,15 +1306,11 @@ function render() {
   var dk = getDayKey(currentDate);
   var rawList = tasksCache[dk] || [];
 
-  // 跨天任务去重：只在 start_date 当天渲染为长条，其他天不重复展示
+  // 跨天任务去重：同一任务在多天都出现在 rawList 中，只保留一次
   var seenIds = {};
   var list = rawList.filter(function(t) {
-    if (t.start_date && t.end_date) {
-      if (seenIds[t.id]) return false;
-      // 只在起始日展示（非中间覆盖日）
-      if (t.task_date !== t.start_date) { seenIds[t.id] = true; return false; }
-      seenIds[t.id] = true;
-    }
+    if (seenIds[t.id]) return false;
+    seenIds[t.id] = true;
     return true;
   });
   var pending = list.filter(function(t){ return !t.done; });
