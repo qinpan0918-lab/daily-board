@@ -17,6 +17,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'daily-board-secret-key-2024';
 
+// 全局未捕获异常处理（防止 Railway 上静默崩溃）
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err.message, err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled Rejection:', reason);
+});
+
 // GitHub 远程备份配置（通过环境变量传入 Token）
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'qinpan0918-lab/daily-board';
@@ -985,12 +993,14 @@ app.get('*', (req, res) => {
 // ⭐ 关键修复：先启动 HTTP 监听，再初始化数据库
 // Railway/Render 有启动超时限制，如果 DB 初始化（含 GitHub 拉取）太慢，
 // 端口没有及时绑定就会被判定为 "Application failed to respond"
-app.listen(PORT, () => {
+const HOST = '0.0.0.0';  // Railway 要求绑定所有网卡，不能用默认 127.0.0.1
+app.listen(PORT, HOST, () => {
+  console.log(`[STARTUP] Server listening on ${HOST}:${PORT}`);
   console.log('');
   console.log('╔══════════════════════════════════════╗');
   console.log('║  🌐 海外云智服每日看板 - 服务端启动     ║');
   console.log('╠══════════════════════════════════════╣');
-  console.log(`║  Port:   http://localhost:${PORT}          `);
+  console.log(`║  Port:   http://${HOST}:${PORT}          `);
   console.log('║  Auth:   JWT Token                      ');
   console.log('║  DB:     sql.js (pure JS SQLite)         ');
   console.log('╚══════════════════════════════════════╝');
