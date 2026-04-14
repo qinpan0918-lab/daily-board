@@ -858,21 +858,32 @@ placeholder="示例 — 粘贴以下格式即可自动识别：
   </div>
 </div>
 
-<!-- Date Picker Modal (日期跳转弹窗) -->
+<!-- Date Picker Modal (自绘日历弹窗) -->
 <div class="modal-overlay" id="datePickerModal">
-  <div class="edit-box" style="width:340px;">
-    <h3>📅 选择日期</h3>
-    <div class="edit-field">
-      <label>跳转到指定日期</label>
-      <input type="date" id="datePickerInput" style="width:100%;padding:12px 16px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:15px;outline:none;-webkit-appearance:none;appearance:none;color-scheme:dark;">
+  <div class="edit-box" style="width:340px;padding:0;overflow:hidden;border-radius:16px;">
+    <!-- 日历头部 -->
+    <div id="calHeader" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;background:linear-gradient(135deg,var(--accent),#7c5ce0);">
+      <button id="calPrevMonth" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .2s;">◀</button>
+      <span id="calTitle" style="color:#fff;font-size:16px;font-weight:700;letter-spacing:1px;"></span>
+      <button id="calNextMonth" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .2s;">▶</button>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-      <button class="btn" id="datePickerToday" style="flex:1;">📌 今天</button>
-      <button class="btn" id="datePickerYesterday" style="flex:1;">⏪ 昨天</button>
+    <!-- 星期行 -->
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);padding:8px 12px 4px;gap:2px;">
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">日</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">一</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">二</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">三</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">四</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">五</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">六</span>
     </div>
-    <div class="edit-actions" style="margin-top:16px;">
-      <button class="btn" id="closeDatePickerBtn">取消</button>
-      <button class="btn btn-primary" id="goDatePickerBtn">✅ 跳转</button>
+    <!-- 日期格子 -->
+    <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);padding:4px 12px 12px;gap:2px;"></div>
+    <!-- 底部快捷按钮 -->
+    <div style="display:flex;gap:8px;padding:0 16px 16px;justify-content:space-between;">
+      <button id="calToday" class="btn" style="flex:1;font-size:13px;">📌 今天</button>
+      <button id="calYesterday" class="btn" style="flex:1;font-size:13px;">⏪ 昨天</button>
+      <button id="calClose" class="btn" style="flex:1;font-size:13px;">✕ 关闭</button>
     </div>
   </div>
 </div>
@@ -1624,24 +1635,79 @@ async function submitChangePwd(){
   }
 }
 
-// ---- Date Picker Modal ----
+// ---- Date Picker Modal (自绘日历) ----
+var calViewDate=new Date(); // 日历当前浏览的月份
 function openDatePicker(){
-  var input=document.getElementById('datePickerInput');
-  // 默认选中当前查看的日期
-  input.value=currentDate.toISOString().slice(0,10);
+  calViewDate=new Date(currentDate.getTime());
   document.getElementById('datePickerModal').classList.add('active');
-  setTimeout(function(){input.focus();},100);
+  renderCalendar();
 }
 function closeDatePicker(){
   document.getElementById('datePickerModal').classList.remove('active');
 }
-function goToPickedDate(){
-  var val=document.getElementById('datePickerInput').value;
-  if(!val)return;
-  currentDate=new Date(val+'T12:00:00');
+function renderCalendar(){
+  var year=calViewDate.getFullYear(), month=calViewDate.getMonth();
+  document.getElementById('calTitle').textContent=year+'年'+(month+1)+'月';
+  var grid=document.getElementById('calGrid');
+  grid.innerHTML='';
+  var firstDay=new Date(year,month,1).getDay();
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  var today=new Date(); var todayKey=today.getFullYear()+'-'+('0'+(today.getMonth()+1)).slice(-2)+'-'+('0'+today.getDate()).slice(-2);
+  var curKey=getDayKey(currentDate);
+  // 上月填充
+  var prevDays=new Date(year,month,0).getDate();
+  for(var i=firstDay-1;i>=0;i--){
+    var d=prevDays-i;
+    var btn=document.createElement('button');
+    btn.textContent=d;
+    btn.style.cssText='background:none;border:none;color:var(--text-dim);opacity:0.3;font-size:14px;padding:8px 0;cursor:pointer;border-radius:8px;';
+    btn.dataset.date=getDayKeyFromYMD(year,month-1,d);
+    btn.addEventListener('click',calDayClick);
+    grid.appendChild(btn);
+  }
+  // 当月日期
+  for(var d=1;d<=daysInMonth;d++){
+    var dk=getDayKeyFromYMD(year,month,d);
+    var btn=document.createElement('button');
+    btn.textContent=d;
+    var isToday=(dk===todayKey);
+    var isCurrent=(dk===curKey);
+    var base='background:none;border:none;color:var(--text);font-size:14px;padding:8px 0;cursor:pointer;border-radius:8px;transition:all .15s;font-weight:500;';
+    if(isCurrent){
+      base+='background:var(--accent);color:#fff;font-weight:700;';
+    }else if(isToday){
+      base+='border:2px solid var(--accent);padding:6px 0;color:var(--accent);font-weight:700;';
+    }
+    btn.style.cssText=base;
+    btn.dataset.date=dk;
+    btn.addEventListener('click',calDayClick);
+    btn.addEventListener('mouseenter',function(){if(!this.dataset.date || this.dataset.date===curKey)return;this.style.background='rgba(99,102,241,0.2)';});
+    btn.addEventListener('mouseleave',function(){if(!this.dataset.date || this.dataset.date===curKey)return;this.style.background='none';});
+    grid.appendChild(btn);
+  }
+  // 下月填充
+  var totalCells=firstDay+daysInMonth;
+  var remain=totalCells%7===0?0:7-totalCells%7;
+  for(var d=1;d<=remain;d++){
+    var btn=document.createElement('button');
+    btn.textContent=d;
+    btn.style.cssText='background:none;border:none;color:var(--text-dim);opacity:0.3;font-size:14px;padding:8px 0;cursor:pointer;border-radius:8px;';
+    btn.dataset.date=getDayKeyFromYMD(year,month+1,d);
+    btn.addEventListener('click',calDayClick);
+    grid.appendChild(btn);
+  }
+}
+function getDayKeyFromYMD(y,m,d){
+  var dt=new Date(y,m,d);
+  return dt.getFullYear()+'-'+('0'+(dt.getMonth()+1)).slice(-2)+'-'+('0'+dt.getDate()).slice(-2);
+}
+function calDayClick(e){
+  var dk=e.target.dataset.date;
+  if(!dk)return;
+  currentDate=new Date(dk+'T12:00:00');
   loadTasksAndRender();
   closeDatePicker();
-  showToast('已跳转到 '+val);
+  showToast('已跳转到 '+dk);
 }
 
 // ============================================================
@@ -1939,17 +2005,22 @@ document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('changePwdModal').addEventListener('click',function(e){if(e.target===this)closeChangePwd();});
   document.getElementById('confirmPwdInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submitChangePwd();}});
 
-  // --- date picker modal ---
-  document.getElementById('closeDatePickerBtn').addEventListener('click',closeDatePicker);
-  document.getElementById('goDatePickerBtn').addEventListener('click',goToPickedDate);
+  // --- date picker modal (自绘日历) ---
+  document.getElementById('calClose').addEventListener('click',closeDatePicker);
   document.getElementById('datePickerModal').addEventListener('click',function(e){if(e.target===this)closeDatePicker();});
-  document.getElementById('datePickerInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();goToPickedDate();}});
-  document.getElementById('datePickerToday').addEventListener('click',function(){
-    document.getElementById('datePickerInput').value=new Date().toISOString().slice(0,10);
+  document.getElementById('calPrevMonth').addEventListener('click',function(){
+    calViewDate.setMonth(calViewDate.getMonth()-1);renderCalendar();
   });
-  document.getElementById('datePickerYesterday').addEventListener('click',function(){
-    var d=new Date();d.setDate(d.getDate()-1);
-    document.getElementById('datePickerInput').value=d.toISOString().slice(0,10);
+  document.getElementById('calNextMonth').addEventListener('click',function(){
+    calViewDate.setMonth(calViewDate.getMonth()+1);renderCalendar();
+  });
+  document.getElementById('calToday').addEventListener('click',function(){
+    currentDate=new Date();currentDate.setHours(12,0,0,0);
+    loadTasksAndRender();closeDatePicker();showToast('已跳转到今天');
+  });
+  document.getElementById('calYesterday').addEventListener('click',function(){
+    var d=new Date();d.setDate(d.getDate()-1);d.setHours(12,0,0,0);
+    currentDate=d;loadTasksAndRender();closeDatePicker();showToast('已跳转到昨天');
   });
 
   // --- export modal ---
