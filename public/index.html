@@ -192,7 +192,7 @@ body {
   border: 1px solid var(--border); background: var(--bg); color: var(--text);
   font-size: 13px; outline: none; transition: all 0.2s;
   -webkit-appearance: none; appearance: none; color-scheme: dark;
-  flex: 1; min-width: 0;
+  flex: 1; min-width: 0; display: none; /* 隐藏原生 date input */
 }
 .date-range-row input[type="date"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .date-toggle {
@@ -202,6 +202,26 @@ body {
 }
 .date-toggle:hover { color: #8aa4ff; }
 .date-range-hint { font-size: 11px; color: var(--text-dim); }
+/* 自绘日期范围按钮 */
+.date-range-btn {
+  padding: 7px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  font-size: 13px; cursor: pointer; transition: all 0.2s;
+  flex: 1; min-width: 100px; text-align: center; font-weight: 500;
+  user-select: none;
+}
+.date-range-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(108,140,255,0.06); }
+/* 范围日历弹窗中的日期样式 */
+.rp-day { background:none; border:none; color:var(--text); font-size:14px; padding:8px 0; cursor:pointer; border-radius:8px; transition:all .15s; font-weight:500; position:relative; }
+.rp-day:hover { background:rgba(99,102,241,0.15); }
+.rp-day.rp-other { color:var(--text-dim); opacity:0.3; }
+.rp-day.rp-today { border:2px solid var(--accent); padding:6px 0; color:var(--accent); font-weight:700; }
+.rp-day.rp-start { background:var(--accent); color:#fff; font-weight:700; border-radius:8px 0 0 8px; }
+.rp-day.rp-end   { background:#7c5ce0; color:#fff; font-weight:700; border-radius:0 8px 8px 0; }
+.rp-day.rp-start.rp-end { border-radius:8px; background:var(--accent); }
+.rp-day.rp-in-range { background:rgba(108,140,255,0.15); color:var(--accent); border-radius:0; }
+.rp-day.rp-start.rp-in-range { border-radius:8px 0 0 8px; }
+.rp-day.rp-end.rp-in-range   { border-radius:0 8px 8px 0; }
 .input-row input, .input-row select {
   flex: 1; min-width: 160px; padding: 11px 15px; border-radius: 10px;
   border: 1px solid var(--border); background: var(--bg); color: var(--text);
@@ -703,11 +723,12 @@ body {
       <span style="font-size:11px;color:var(--text-dim);margin-left:4px;">（选填）</span>
     </div>
     <div class="date-range-row visible" id="dateRangeRow" style="border-style:solid;">
-      <label>📅 开始日期</label>
       <input type="date" id="startDate" />
-      <span style="color:var(--text-dim);font-size:12px;">→</span>
-      <label>结束日期</label>
       <input type="date" id="endDate" />
+      <label>📅 日期范围</label>
+      <button type="button" class="date-range-btn" id="addDateRangeBtn" onclick="openRangePicker('add')">
+        <span id="addRangeLabel">选择日期范围</span>
+      </button>
       <span class="date-range-hint" id="rangeHint"></span>
     </div>
     <!-- Import Area -->
@@ -773,14 +794,14 @@ placeholder="示例 — 粘贴以下格式即可自动识别：
       <div class="edit-field"><label>结束时间</label><input type="time" id="editEndTime"></div>
     </div>
     <div class="edit-field" style="margin-top:4px;">
-      <label style="color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:4px;" data-action="toggleEditRange">📅 跨天事项（持续多天/周）<span style="font-size:11px;font-weight:400;color:var(--text-dim);">展开</span></label>
     </div>
-    <div class="date-range-row" id="editDateRangeRow" style="border-style:dashed;background:var(--bg);">
-      <label>开始日期</label>
+    <div class="date-range-row visible" id="editDateRangeRow" style="border-style:dashed;background:var(--bg);">
       <input type="date" id="editStartDate" />
-      <span style="color:var(--text-dim);font-size:12px;">→</span>
-      <label>结束日期</label>
       <input type="date" id="editEndDate" />
+      <label>📅 日期范围</label>
+      <button type="button" class="date-range-btn" id="editDateRangeBtn" onclick="openRangePicker('edit')">
+        <span id="editRangeLabel">选择日期范围</span>
+      </button>
       <span class="date-range-hint" id="editRangeHint"></span>
     </div>
     <input type="hidden" id="editId">
@@ -884,6 +905,40 @@ placeholder="示例 — 粘贴以下格式即可自动识别：
       <button id="calToday" class="btn" style="flex:1;font-size:13px;">📌 今天</button>
       <button id="calYesterday" class="btn" style="flex:1;font-size:13px;">⏪ 昨天</button>
       <button id="calClose" class="btn" style="flex:1;font-size:13px;">✕ 关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Date Range Picker Modal (范围日历弹窗 - 选开始+结束日期) -->
+<div class="modal-overlay" id="dateRangePickerModal" style="z-index:260;">
+  <div class="edit-box" style="width:340px;padding:0;overflow:hidden;border-radius:16px;">
+    <!-- 头部状态提示 -->
+    <div id="rpHeader" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;background:linear-gradient(135deg,var(--accent),#7c5ce0);">
+      <button id="rpPrevMonth" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .2s;">◀</button>
+      <div style="text-align:center;">
+        <span id="rpTitle" style="color:#fff;font-size:16px;font-weight:700;letter-spacing:1px;display:block;"></span>
+        <span id="rpHint" style="color:rgba(255,255,255,0.7);font-size:11px;">👆 点击选择开始日期</span>
+      </div>
+      <button id="rpNextMonth" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .2s;">▶</button>
+    </div>
+    <!-- 星期行 -->
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);padding:8px 12px 4px;gap:2px;">
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">日</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">一</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">二</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">三</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">四</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">五</span>
+      <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">六</span>
+    </div>
+    <!-- 日期格子 -->
+    <div id="rpGrid" style="display:grid;grid-template-columns:repeat(7,1fr);padding:4px 12px 12px;gap:2px;"></div>
+    <!-- 已选范围显示 + 底部按钮 -->
+    <div id="rpSelection" style="text-align:center;padding:0 16px 8px;font-size:13px;color:var(--accent);font-weight:600;min-height:24px;"></div>
+    <div style="display:flex;gap:8px;padding:0 16px 16px;justify-content:space-between;">
+      <button id="rpToday" class="btn" style="flex:1;font-size:13px;">📌 今天（单天）</button>
+      <button id="rpClear" class="btn" style="flex:1;font-size:13px;">🔄 重选</button>
+      <button id="rpClose" class="btn" style="flex:1;font-size:13px;">✕ 关闭</button>
     </div>
   </div>
 </div>
@@ -1403,6 +1458,7 @@ function handleAddSingle() {
       document.getElementById('startDate').value=_dk;
       document.getElementById('endDate').value=_dk;
       updateRangeHint();
+      updateAddRangeLabel();
       input.focus();
       tasksCache[dk].push(data.task);
       render();
@@ -1473,14 +1529,8 @@ function openEdit(id){
   // 跨天日期
   document.getElementById('editStartDate').value=task.start_date||'';
   document.getElementById('editEndDate').value=task.end_date||'';
-  // 如果是跨天任务，自动展开编辑区域的跨天选项
-  var editRangeRow=document.getElementById('editDateRangeRow');
-  if(task.start_date&&task.end_date){
-    editRangeRow.classList.add('visible');
-    updateEditRangeHint();
-  }else{
-    editRangeRow.classList.remove('visible');
-  }
+  updateEditRangeLabel();
+  updateEditRangeHint();
   
   document.getElementById('editModal').classList.add('active');
   document.getElementById('editTitle').focus();
@@ -1710,6 +1760,167 @@ function calDayClick(e){
   showToast('已跳转到 '+dk);
 }
 
+// ---- Range Date Picker (范围日历弹窗) ----
+var rpViewDate=new Date();  // 范围日历当前浏览月
+var rpStartDate=null;       // 已选开始日期 (string 'YYYY-MM-DD')
+var rpEndDate=null;         // 已选结束日期
+var rpTarget=null;          // 'add' or 'edit' 标记目标表单
+var rpStep=0;               // 0=未选, 1=已选开始待选结束
+
+function openRangePicker(target){
+  rpTarget=target;
+  rpStep=0;
+  // 读取当前表单中的值作为初始状态
+  if(target==='add'){
+    rpStartDate=document.getElementById('startDate').value||getDayKey(currentDate);
+    rpEndDate=document.getElementById('endDate').value||rpStartDate;
+  }else{
+    rpStartDate=document.getElementById('editStartDate').value||'';
+    rpEndDate=document.getElementById('editEndDate').value||'';
+  }
+  if(rpStartDate&&rpEndDate){rpStep=2;}  // 已有范围，直接显示
+  rpViewDate=rpStartDate?new Date(rpStartDate+'T12:00:00'):new Date(currentDate.getTime());
+  document.getElementById('dateRangePickerModal').classList.add('active');
+  renderRangePicker();
+}
+function closeRangePicker(){
+  document.getElementById('dateRangePickerModal').classList.remove('active');
+}
+function renderRangePicker(){
+  var year=rpViewDate.getFullYear(),month=rpViewDate.getMonth();
+  document.getElementById('rpTitle').textContent=year+'年'+(month+1)+'月';
+  // 状态提示
+  var hint=document.getElementById('rpHint');
+  if(rpStep===0) hint.textContent='👆 点击选择开始日期';
+  else if(rpStep===1) hint.textContent='👆 再点击选择结束日期';
+  else hint.textContent='✅ 已选定范围，可重选或关闭';
+
+  var grid=document.getElementById('rpGrid');
+  grid.innerHTML='';
+  var firstDay=new Date(year,month,1).getDay();
+  var daysInMonth=new Date(year,month+1,0).getDate();
+  var today=new Date();
+  var todayKey=today.getFullYear()+'-'+('0'+(today.getMonth()+1)).slice(-2)+'-'+('0'+today.getDate()).slice(-2);
+
+  // 上月填充
+  var prevDays=new Date(year,month,0).getDate();
+  for(var i=firstDay-1;i>=0;i--){
+    var d=prevDays-i;
+    var dk=getDayKeyFromYMD(year,month-1,d);
+    grid.appendChild(makeRpDay(d,dk,true,todayKey));
+  }
+  // 当月
+  for(var d=1;d<=daysInMonth;d++){
+    var dk=getDayKeyFromYMD(year,month,d);
+    grid.appendChild(makeRpDay(d,dk,false,todayKey));
+  }
+  // 下月填充
+  var totalCells=firstDay+daysInMonth;
+  var remain=totalCells%7===0?0:7-totalCells%7;
+  for(var d=1;d<=remain;d++){
+    var dk=getDayKeyFromYMD(year,month+1,d);
+    grid.appendChild(makeRpDay(d,dk,true,todayKey));
+  }
+  // 选中范围提示
+  updateRpSelection();
+}
+function makeRpDay(dayNum,dk,isOther,todayKey){
+  var btn=document.createElement('button');
+  btn.textContent=dayNum;
+  btn.dataset.date=dk;
+  var cls='rp-day';
+  if(isOther) cls+=' rp-other';
+  if(dk===todayKey&&!isOther) cls+=' rp-today';
+  // 范围高亮
+  if(rpStartDate&&rpEndDate&&rpStartDate<=rpEndDate){
+    if(dk===rpStartDate) cls+=' rp-start';
+    if(dk===rpEndDate) cls+=' rp-end';
+    if(dk>rpStartDate&&dk<rpEndDate) cls+=' rp-in-range';
+  }else if(rpStartDate&&!rpEndDate){
+    if(dk===rpStartDate) cls+=' rp-start rp-end';
+  }
+  btn.className=cls;
+  btn.addEventListener('click',rpDayClick);
+  return btn;
+}
+function rpDayClick(e){
+  var dk=e.target.dataset.date;
+  if(!dk)return;
+  if(rpStep===0||rpStep===2){
+    // 选开始日期（重选时也重置）
+    rpStartDate=dk;
+    rpEndDate=null;
+    rpStep=1;
+    renderRangePicker();
+  }else if(rpStep===1){
+    // 选结束日期
+    if(dk<rpStartDate){
+      // 如果点的比开始日期早，交换
+      rpEndDate=rpStartDate;
+      rpStartDate=dk;
+    }else{
+      rpEndDate=dk;
+    }
+    rpStep=2;
+    renderRangePicker();
+    // 自动填入表单并关闭
+    applyRangeSelection();
+  }
+}
+function applyRangeSelection(){
+  if(!rpStartDate||!rpEndDate)return;
+  if(rpTarget==='add'){
+    document.getElementById('startDate').value=rpStartDate;
+    document.getElementById('endDate').value=rpEndDate;
+    updateAddRangeLabel();
+    // 触发 updateRangeHint（如果在 DOMContentLoaded 内定义需要通过 change 事件）
+    document.getElementById('startDate').dispatchEvent(new Event('change'));
+  }else if(rpTarget==='edit'){
+    document.getElementById('editStartDate').value=rpStartDate;
+    document.getElementById('editEndDate').value=rpEndDate;
+    updateEditRangeLabel();
+    document.getElementById('editStartDate').dispatchEvent(new Event('change'));
+  }
+  // 延迟关闭，让用户看到选择效果
+  setTimeout(function(){closeRangePicker();},350);
+}
+function updateRpSelection(){
+  var el=document.getElementById('rpSelection');
+  if(rpStartDate&&rpEndDate){
+    var d1=new Date(rpStartDate+'T12:00'),d2=new Date(rpEndDate+'T12:00');
+    var days=Math.round((d2-d1)/86400000)+1;
+    el.textContent=rpStartDate.slice(5)+' → '+rpEndDate.slice(5)+' （共'+days+'天）';
+  }else if(rpStartDate){
+    el.textContent='开始：'+rpStartDate.slice(5)+' → 点击选结束日期';
+  }else{
+    el.textContent='';
+  }
+}
+function updateAddRangeLabel(){
+  var sd=document.getElementById('startDate').value;
+  var ed=document.getElementById('endDate').value;
+  var label=document.getElementById('addRangeLabel');
+  if(sd&&ed){
+    var d1=new Date(sd+'T12:00'),d2=new Date(ed+'T12:00');
+    var days=Math.round((d2-d1)/86400000)+1;
+    label.textContent=sd.slice(5)+' → '+ed.slice(5)+' （'+days+'天）';
+  }else{
+    label.textContent='选择日期范围';
+  }
+}
+function updateEditRangeLabel(){
+  var sd=document.getElementById('editStartDate').value;
+  var ed=document.getElementById('editEndDate').value;
+  var label=document.getElementById('editRangeLabel');
+  if(sd&&ed){
+    var d1=new Date(sd+'T12:00'),d2=new Date(ed+'T12:00');
+    var days=Math.round((d2-d1)/86400000)+1;
+    label.textContent=sd.slice(5)+' → '+ed.slice(5)+' （'+days+'天）';
+  }else{
+    label.textContent='选择日期范围';
+  }
+}
+
 // ============================================================
 //  EXPORT
 // ============================================================
@@ -1834,6 +2045,7 @@ function toast(msg,isErr){
   clearTimeout(_toastTimer);
   _toastTimer=setTimeout(function(){el.classList.remove('show');},2500);
 }
+var showToast=toast;
 
 
 // ============================================================
@@ -1933,6 +2145,7 @@ document.addEventListener('DOMContentLoaded',function(){
     document.getElementById('startDate').value=dk;
     document.getElementById('endDate').value=dk;
     updateRangeHint();
+    updateAddRangeLabel();
   })();
   function updateEditRangeHint(){
     var sd=document.getElementById('editStartDate').value;
@@ -2022,6 +2235,27 @@ document.addEventListener('DOMContentLoaded',function(){
     var d=new Date();d.setDate(d.getDate()-1);d.setHours(12,0,0,0);
     currentDate=d;loadTasksAndRender();closeDatePicker();showToast('已跳转到昨天');
   });
+
+  // --- range picker modal (范围日历弹窗) ---
+  document.getElementById('rpClose').addEventListener('click',closeRangePicker);
+  document.getElementById('dateRangePickerModal').addEventListener('click',function(e){if(e.target===this)closeRangePicker();});
+  document.getElementById('rpPrevMonth').addEventListener('click',function(){
+    rpViewDate.setMonth(rpViewDate.getMonth()-1);renderRangePicker();
+  });
+  document.getElementById('rpNextMonth').addEventListener('click',function(){
+    rpViewDate.setMonth(rpViewDate.getMonth()+1);renderRangePicker();
+  });
+  document.getElementById('rpToday').addEventListener('click',function(){
+    var todayKey=getDayKey(new Date());
+    rpStartDate=todayKey;rpEndDate=todayKey;rpStep=2;
+    applyRangeSelection();
+  });
+  document.getElementById('rpClear').addEventListener('click',function(){
+    rpStartDate=null;rpEndDate=null;rpStep=0;
+    renderRangePicker();
+  });
+  // 初始化添加表单的按钮文字
+  updateAddRangeLabel();
 
   // --- export modal ---
   document.getElementById('copyMdBtn').addEventListener('click',function(){var txt=buildPreview('md');copyToClipboard(txt);toast('Markdown 已复制 ✓');});
