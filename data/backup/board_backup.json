@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-13T11:35:32.190Z",
+  "exported_at": "2026-04-14T06:34:48.749Z",
   "data": {
     "users": [
       {
@@ -10,7 +10,7 @@
         "name": "kris",
         "avatar": "",
         "created_at": "2026-04-08T12:21:00Z",
-        "last_login": "2026-04-13 03:48:13"
+        "last_login": "2026-04-14 06:34:26"
       }
     ],
     "tasks": [
@@ -149,8 +149,8 @@
         "start_time": "",
         "end_time": "19:31",
         "task_date": "2026-04-13",
-        "start_date": "2026-04-13",
-        "end_date": "2026-04-15",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-13 01:45:52",
         "updated_at": "2026-04-13 11:31:36"
       },
@@ -177,8 +177,8 @@
         "start_time": "",
         "end_time": "",
         "task_date": "2026-04-13",
-        "start_date": "2026-04-13",
-        "end_date": "2026-04-17",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-04-13 01:52:06",
         "updated_at": "2026-04-13 11:30:38"
       }
