@@ -878,7 +878,7 @@ placeholder="示例 — 粘贴以下格式即可自动识别：
       <span style="text-align:center;font-size:12px;color:var(--text-dim);font-weight:600;">六</span>
     </div>
     <!-- 日期格子 -->
-    <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);padding:4px 12px 12px;gap:2px;"></div>
+    <div id="pickerGrid" style="display:grid;grid-template-columns:repeat(7,1fr);padding:4px 12px 12px;gap:2px;"></div>
     <!-- 底部快捷按钮 -->
     <div style="display:flex;gap:8px;padding:0 16px 16px;justify-content:space-between;">
       <button id="calToday" class="btn" style="flex:1;font-size:13px;">📌 今天</button>
@@ -1648,7 +1648,7 @@ function closeDatePicker(){
 function renderCalendar(){
   var year=calViewDate.getFullYear(), month=calViewDate.getMonth();
   document.getElementById('calTitle').textContent=year+'年'+(month+1)+'月';
-  var grid=document.getElementById('calGrid');
+  var grid=document.getElementById('pickerGrid');
   grid.innerHTML='';
   var firstDay=new Date(year,month,1).getDay();
   var daysInMonth=new Date(year,month+1,0).getDate();
