@@ -895,6 +895,25 @@ placeholder="示例 — 粘贴以下格式即可自动识别：
   </div>
 </div>
 
+<!-- Date Picker Modal (日期跳转弹窗) -->
+<div class="modal-overlay" id="datePickerModal">
+  <div class="edit-box" style="width:340px;">
+    <h3>📅 选择日期</h3>
+    <div class="edit-field">
+      <label>跳转到指定日期</label>
+      <input type="date" id="datePickerInput" style="width:100%;padding:12px 16px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:15px;outline:none;-webkit-appearance:none;appearance:none;color-scheme:dark;">
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <button class="btn" id="datePickerToday" style="flex:1;">📌 今天</button>
+      <button class="btn" id="datePickerYesterday" style="flex:1;">⏪ 昨天</button>
+    </div>
+    <div class="edit-actions" style="margin-top:16px;">
+      <button class="btn" id="closeDatePickerBtn">取消</button>
+      <button class="btn btn-primary" id="goDatePickerBtn">✅ 跳转</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1678,6 +1697,26 @@ async function submitChangePwd(){
   }
 }
 
+// ---- Date Picker Modal ----
+function openDatePicker(){
+  var input=document.getElementById('datePickerInput');
+  // 默认选中当前查看的日期
+  input.value=currentDate.toISOString().slice(0,10);
+  document.getElementById('datePickerModal').classList.add('active');
+  setTimeout(function(){input.focus();},100);
+}
+function closeDatePicker(){
+  document.getElementById('datePickerModal').classList.remove('active');
+}
+function goToPickedDate(){
+  var val=document.getElementById('datePickerInput').value;
+  if(!val)return;
+  currentDate=new Date(val+'T12:00:00');
+  loadTasksAndRender();
+  closeDatePicker();
+  showToast('已跳转到 '+val);
+}
+
 // ============================================================
 //  EXPORT
 // ============================================================
@@ -1856,9 +1895,9 @@ document.addEventListener('DOMContentLoaded',function(){
     if(dk){currentDate=new Date(dk+'T12:00:00');loadTasksAndRender();}
   });
 
-  // --- date display 点击跳转日历视图 ---
+  // --- date display 点击弹出日期选择弹窗 ---
   document.getElementById('dateDisplay').addEventListener('click',function(){
-    switchView('calendar');
+    openDatePicker();
   });
 
   // --- user dropdown ---
@@ -1971,6 +2010,19 @@ document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('savePwdBtn').addEventListener('click',submitChangePwd);
   document.getElementById('changePwdModal').addEventListener('click',function(e){if(e.target===this)closeChangePwd();});
   document.getElementById('confirmPwdInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submitChangePwd();}});
+
+  // --- date picker modal ---
+  document.getElementById('closeDatePickerBtn').addEventListener('click',closeDatePicker);
+  document.getElementById('goDatePickerBtn').addEventListener('click',goToPickedDate);
+  document.getElementById('datePickerModal').addEventListener('click',function(e){if(e.target===this)closeDatePicker();});
+  document.getElementById('datePickerInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();goToPickedDate();}});
+  document.getElementById('datePickerToday').addEventListener('click',function(){
+    document.getElementById('datePickerInput').value=new Date().toISOString().slice(0,10);
+  });
+  document.getElementById('datePickerYesterday').addEventListener('click',function(){
+    var d=new Date();d.setDate(d.getDate()-1);
+    document.getElementById('datePickerInput').value=d.toISOString().slice(0,10);
+  });
 
   // --- export modal ---
   document.getElementById('copyMdBtn').addEventListener('click',function(){var txt=buildPreview('md');copyToClipboard(txt);toast('Markdown 已复制 ✓');});
