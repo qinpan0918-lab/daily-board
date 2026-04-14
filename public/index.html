@@ -461,40 +461,6 @@ body {
 }
 .date-nav button:hover { border-color: var(--accent); color: var(--accent); }
 
-/* ====== Week Date Bar (常驻快速选日期) ====== */
-.week-bar {
-  display: flex; gap: 4px; margin-top: 8px;
-  padding: 8px 12px; background: var(--card);
-  border: 1px solid var(--border); border-radius: 10px;
-  overflow-x: auto; -webkit-overflow-scrolling: touch;
-}
-.week-bar::-webkit-scrollbar { height: 3px; }
-.week-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-.week-day-btn {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 6px 10px; min-width: 52px; border-radius: 8px;
-  border: 1px solid transparent; background: transparent;
-  color: var(--text-dim); cursor: pointer;
-  font-family: inherit; transition: all 0.15s; flex-shrink: 0;
-  -webkit-appearance: none;
-}
-.week-day-btn .wd-dow { font-size: 10px; font-weight: 600; opacity: 0.7; margin-bottom: 2px; }
-.week-day-btn .wd-date { font-size: 14px; font-weight: 700; }
-.week-day-btn:hover { background: rgba(108,140,255,0.08); color: var(--text); border-color: var(--border); }
-.week-day-btn.active {
-  background: var(--accent); color: #fff; border-color: var(--accent);
-  box-shadow: 0 2px 10px var(--accent-glow);
-}
-.week-day-btn.active .wd-dow { opacity: 1; }
-.week-day-btn.is-today { border-color: var(--done); }
-.week-day-btn.is-today:not(.active) { background: rgba(61,214,140,0.08); color: var(--done); }
-.week-day-btn .wd-dot {
-  width: 5px; height: 5px; border-radius: 50%; margin-top: 3px;
-  background: transparent;
-}
-.week-day-btn.has-task .wd-dot { background: var(--pending); }
-.week-day-btn.has-done .wd-dot { background: var(--done); }
-
 /* ====== View Tabs ====== */
 .view-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
 .tab-btn {
@@ -680,8 +646,6 @@ body {
       <button data-action="nextDay">▶</button>
     </div>
   </div>
-  <!-- 常驻周日期快速选择条 -->
-  <div class="week-bar" id="weekBar"></div>
   <div class="header-actions">
     <div class="user-info" id="userInfo">
       <span class="user-avatar" id="userAvatar">?</span>
@@ -1336,7 +1300,6 @@ function render() {
     ? done.map(taskHTML).join('')
     : '<div class="empty-state"><div class="icon">✨</div>还没有已完成事项</div>';
 
-  renderWeekBar();
 }
 
 var CAT_ICONS = {'工作':'📌','沟通':'💬','跟进':'🔍','学习':'📚','生活':'🏠','其他':'📎'};
@@ -1612,39 +1575,6 @@ function goToday(){currentDate=new Date();loadTasksAndRender();}
 // ============================================================
 //  WEEK BAR (常驻快速选日期)
 // ============================================================
-var WEEK_DOWS=['日','一','二','三','四','五','六'];
-
-function renderWeekBar(){
-  var bar=document.getElementById('weekBar');
-  if(!bar)return;
-  // 以当前日期所在周为中心，显示前后各2天（共9天或取整周）
-  var today=new Date();
-  var todayStr=getDayKey(today);
-  var curStr=getDayKey(currentDate);
-  // 算出当前周的周一
-  var dow=currentDate.getDay();
-  var mon=new Date(currentDate);mon.setDate(currentDate.getDate()-dow);
-  // 显示周一~周日 + 前后各延伸几天，共展示11天（上周五~下周二）
-  var start=new Date(mon);start.setDate(mon.getDate()-3);
-  var html='';
-  for(var i=0;i<11;i++){
-    var d=new Date(start);d.setDate(start.getDate()+i);
-    var dk=getDayKey(d);
-    var isToday=(dk===todayStr);
-    var isActive=(dk===curStr);
-    var list=tasksCache[dk]||[];
-    var hasPending=list.some(function(t){return!t.done;});
-    var hasDone=list.some(function(t){return t.done;});
-    html+='<button class="week-day-btn'+(isActive?' active':'')+(isToday?' is-today':'')+(hasPending?' has-task':'')+(hasDone&&!hasPending?' has-done':'')+'" data-godate="'+dk+'">'+
-      '<span class="wd-dow">周'+WEEK_DOWS[d.getDay()]+'</span>'+
-      '<span class="wd-date">'+d.getDate()+'</span>'+
-      '<span class="wd-dot"></span>'+
-    '</button>';
-  }
-  bar.innerHTML=html;
-}
-
-
 // ============================================================
 //  CHANGE PASSWORD
 // ============================================================
@@ -1882,14 +1812,6 @@ document.addEventListener('DOMContentLoaded',function(){
       var ia=document.getElementById('importArea');ia.classList.toggle('visible');
       if(ia.classList.contains('visible'))document.getElementById('importTextarea').focus();
     }
-  });
-
-  // --- week bar 快速选日期 ---
-  document.getElementById('weekBar').addEventListener('click',function(e){
-    var btn=e.target.closest('[data-godate]');
-    if(!btn)return;
-    var dk=btn.getAttribute('data-godate');
-    if(dk){currentDate=new Date(dk+'T12:00:00');loadTasksAndRender();}
   });
 
   // --- date display 点击弹出日期选择弹窗 ---
