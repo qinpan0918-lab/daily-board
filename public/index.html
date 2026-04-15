@@ -1988,6 +1988,7 @@ function switchView(view){
   document.getElementById('kanbanWrap').classList.toggle('hidden',view!=='kanban');
   document.getElementById('calendarView').classList.toggle('active',view==='calendar');
   if(view==='calendar'){loadGlobalTasks(renderGlobalCalendar);}
+  else if(view==='kanban'){loadTasksAndRender();}
 }
 
 function changeMonth(delta){calMonth.setMonth(calMonth.getMonth()+delta);renderGlobalCalendar();}
@@ -2096,7 +2097,16 @@ document.addEventListener('DOMContentLoaded',function(){
     var cell=e.target.closest('.cal-day');
     if(!cell||cell.classList.contains('other-month'))return;
     var dk=cell.getAttribute('data-day');
-    if(dk){currentDate=new Date(dk+'T12:00:00');switchView('kanban');toast('已切换到 '+dk);}
+    if(dk){
+      currentDate=new Date(dk+'T12:00:00');
+      // 先切换到看板视图，再加载对应日期数据
+      currentView='kanban';
+      document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('active',b.getAttribute('data-view')==='kanban');});
+      document.getElementById('kanbanWrap').classList.remove('hidden');
+      document.getElementById('calendarView').classList.remove('active');
+      loadTasksAndRender();
+      toast('已切换到 '+dk);
+    }
   });
 
   // --- header ---
