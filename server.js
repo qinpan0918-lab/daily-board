@@ -10,6 +10,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const compression = require('compression');
 const initSqlJs = require('sql.js');
 const path = require('path');
 const fs = require('fs');
@@ -57,6 +58,7 @@ if (!fs.existsSync(DATA_DIR)) {
 
 // ---- Middleware ----
 app.use(cors());
+app.use(compression());
 app.use(express.json());
 
 // ============================================================
