@@ -339,10 +339,11 @@ body {
   margin-top: 1px; display: flex; align-items: center; justify-content: center;
   transition: all 0.15s; font-size: 12px;
   user-select: none; -webkit-user-select: none;
+  z-index: 10; touch-action: manipulation;
 }
 .task-checkbox.checked { background: var(--done); border-color: var(--done); color: #fff; }
 .task-checkbox:hover:not(.checked) { border-color: var(--accent); }
-.task-title { flex: 1; font-size: 14px; font-weight: 500; word-break: break-word; }
+.task-title { flex: 1; font-size: 14px; font-weight: 500; word-break: break-word; padding-right: 76px; }
 .task-meta { display: flex; gap: 7px; margin-top: 10px; flex-wrap: wrap; }
 .tag { font-size: 11px; padding: 3px 10px; border-radius: 6px; font-weight: 500; white-space: nowrap; }
 .tag-status-pending { background: var(--pending-bg); color: var(--pending); }
@@ -351,21 +352,23 @@ body {
 .tag-time           { color: var(--text-dim); background: rgba(139,143,163,0.1); }
 
 .task-edit {
-  position: absolute; top: 10px; right: 42px; width: 32px; height: 32px;
-  border-radius: 8px; border: none; background: rgba(108,140,255,0.08);
+  position: absolute; top: 10px; right: 42px; width: 36px; height: 36px;
+  border-radius: 8px; border: none; background: rgba(108,140,255,0.12);
   color: var(--text-dim); cursor: pointer; font-size: 14px;
   display: flex; align-items: center; justify-content: center; transition: all 0.2s;
   user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  z-index: 10; touch-action: manipulation;
 }
 .task-delete {
-  position: absolute; top: 10px; right: 6px; width: 32px; height: 32px;
-  border-radius: 8px; border: none; background: rgba(255,107,122,0.06);
+  position: absolute; top: 10px; right: 2px; width: 36px; height: 36px;
+  border-radius: 8px; border: none; background: rgba(255,107,122,0.1);
   color: var(--text-dim); cursor: pointer; font-size: 15px;
   display: flex; align-items: center; justify-content: center; transition: all 0.2s;
   user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  z-index: 10; touch-action: manipulation;
 }
-.task-edit:hover, .task-edit:active { background: rgba(108,140,255,0.2); color: var(--accent); }
-.task-delete:hover, .task-delete:active { background: rgba(255,107,122,0.2); color: var(--danger); }
+.task-edit:hover, .task-edit:active { background: rgba(108,140,255,0.3); color: var(--accent); transform: scale(1.1); }
+.task-delete:hover, .task-delete:active { background: rgba(255,107,122,0.3); color: var(--danger); transform: scale(1.1); }
 
 .empty-state { text-align: center; padding: 30px 16px; color: var(--text-dim); font-size: 13px; }
 .empty-state .icon { font-size: 36px; margin-bottom: 8px; opacity: 0.35; }
@@ -2047,6 +2050,30 @@ var showToast=toast;
 
 
 // ============================================================
+//  DATE RANGE HINT (全局作用域，供 handleAddSingle 等调用)
+// ============================================================
+function updateRangeHint(){
+  var sd=document.getElementById('startDate').value;
+  var ed=document.getElementById('endDate').value;
+  var hint=document.getElementById('rangeHint');
+  if(sd&&ed){
+    var d1=new Date(sd+'T12:00'),d2=new Date(ed+'T12:00');
+    var days=Math.round((d2-d1)/(86400000))+1;
+    if(days>0)hint.textContent='共 '+days+' 天';else hint.textContent='结束日期需≥开始日期';
+  }else{hint.textContent='';}
+}
+function updateEditRangeHint(){
+  var sd=document.getElementById('editStartDate').value;
+  var ed=document.getElementById('editEndDate').value;
+  var hint=document.getElementById('editRangeHint');
+  if(sd&&ed){
+    var d1=new Date(sd+'T12:00'),d2=new Date(ed+'T12:00');
+    var days=Math.round((d2-d1)/(86400000))+1;
+    if(days>0)hint.textContent='共 '+days+' 天';else hint.textContent='';
+  }else{hint.textContent='';}
+}
+
+// ============================================================
 //  MAIN APP EVENT BINDINGS
 // ============================================================
 document.addEventListener('DOMContentLoaded',function(){
@@ -2125,16 +2152,6 @@ document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('taskInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();handleAddSingle();}});
 
   // --- date range (跨天事项) toggle & events ---
-  function updateRangeHint(){
-    var sd=document.getElementById('startDate').value;
-    var ed=document.getElementById('endDate').value;
-    var hint=document.getElementById('rangeHint');
-    if(sd&&ed){
-      var d1=new Date(sd+'T12:00'),d2=new Date(ed+'T12:00');
-      var days=Math.round((d2-d1)/(86400000))+1;
-      if(days>0)hint.textContent='共 '+days+' 天';else hint.textContent='结束日期需≥开始日期';
-    }else{hint.textContent='';}
-  }
   // 初始化默认值：发起时间=现在，开始/结束日期=今天
   (function initAddDefaults(){
     var now=new Date();
@@ -2145,16 +2162,6 @@ document.addEventListener('DOMContentLoaded',function(){
     updateRangeHint();
     updateAddRangeLabel();
   })();
-  function updateEditRangeHint(){
-    var sd=document.getElementById('editStartDate').value;
-    var ed=document.getElementById('editEndDate').value;
-    var hint=document.getElementById('editRangeHint');
-    if(sd&&ed){
-      var d1=new Date(sd+'T12:00'),d2=new Date(ed+'T12:00');
-      var days=Math.round((d2-d1)/(86400000))+1;
-      if(days>0)hint.textContent='共 '+days+' 天';else hint.textContent='';
-    }else{hint.textContent='';}
-  }
   document.getElementById('addSection').addEventListener('click',function(e){
     var btn=e.target.closest('[data-action]');
     if(!btn)return;
