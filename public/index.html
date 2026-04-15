@@ -283,12 +283,25 @@ body {
 
 .task-item {
   background: var(--bg); border: 1px solid var(--border);
-  border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+  border-radius: 10px; padding: 14px 16px 14px 22px; margin-bottom: 10px;
   cursor: pointer; transition: all 0.2s ease; position: relative;
 }
 .task-item:hover { border-color: var(--accent); transform: translateX(4px); }
 .task-item.done { opacity: 0.6; border-color: rgba(61,214,140,0.2); }
 .task-item.done .task-title { text-decoration: line-through; color: var(--text-dim); }
+
+/* 拖拽样式 */
+.task-item[draggable="true"] { cursor: grab; }
+.task-item.dragging { opacity: 0.4; transform: scale(0.96); border: 2px dashed var(--accent); }
+.task-item.drag-over { border-top: 3px solid var(--accent); margin-top: -1px; }
+.drag-handle {
+  position: absolute; left: -4px; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 36px; display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim); font-size: 14px; cursor: grab; opacity: 0.4;
+  transition: opacity 0.2s; user-select: none; z-index: 5;
+  touch-action: none;
+}
+.task-item:hover .drag-handle { opacity: 1; }
 
 /* 跨天事项特殊标记 */
 .task-item.multi-day {
@@ -1367,6 +1380,160 @@ function render() {
     ? done.map(taskHTML).join('')
     : '<div class="empty-state"><div class="icon">✨</div>还没有已完成事项</div>';
 
+  // 初始化拖拽排序
+  initDragSort('pendingList');
+  initDragSort('doneList');
+}
+
+// ---- 拖拽排序 ----
+var dragSrcEl = null;
+
+function initDragSort(listId) {
+  var list = document.getElementById(listId);
+  if (!list) return;
+  var items = list.querySelectorAll('.task-item[draggable="true"]');
+  items.forEach(function(item) {
+    item.addEventListener('dragstart', handleDragStart);
+    item.addEventListener('dragover', handleDragOver);
+    item.addEventListener('dragenter', handleDragEnter);
+    item.addEventListener('dragleave', handleDragLeave);
+    item.addEventListener('drop', handleDrop);
+    item.addEventListener('dragend', handleDragEnd);
+    // 移动端触摸拖拽支持
+    item.addEventListener('touchstart', handleTouchStart, {passive: false});
+    item.addEventListener('touchmove', handleTouchMove, {passive: false});
+    item.addEventListener('touchend', handleTouchEnd);
+  });
+}
+
+function handleDragStart(e) {
+  dragSrcEl = this;
+  this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', this.getAttribute('data-id'));
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDragEnter(e) {
+  e.preventDefault();
+  if (this !== dragSrcEl && this.classList.contains('task-item')) {
+    this.classList.add('drag-over');
+  }
+}
+
+function handleDragLeave(e) {
+  this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  if (dragSrcEl !== this && this.classList.contains('task-item')) {
+    var list = this.parentNode;
+    var allItems = Array.from(list.querySelectorAll('.task-item'));
+    var fromIdx = allItems.indexOf(dragSrcEl);
+    var toIdx = allItems.indexOf(this);
+    if (fromIdx < toIdx) {
+      list.insertBefore(dragSrcEl, this.nextSibling);
+    } else {
+      list.insertBefore(dragSrcEl, this);
+    }
+    // 清除拖拽样式
+    this.classList.remove('drag-over');
+    // 保存新顺序到后端
+    saveSortOrder(list);
+  }
+  return false;
+}
+
+function handleDragEnd(e) {
+  this.classList.remove('dragging');
+  var allItems = document.querySelectorAll('.task-item');
+  allItems.forEach(function(item) {
+    item.classList.remove('drag-over');
+    item.classList.remove('dragging');
+  });
+}
+
+// 移动端触摸拖拽
+var touchDragEl = null, touchClone = null, touchStartY = 0, touchList = null;
+
+function handleTouchStart(e) {
+  // 只在拖拽手柄上触发
+  if (!e.target.classList.contains('drag-handle')) return;
+  e.preventDefault();
+  touchDragEl = this;
+  touchList = this.parentNode;
+  touchStartY = e.touches[0].clientY;
+  this.classList.add('dragging');
+}
+
+function handleTouchMove(e) {
+  if (!touchDragEl) return;
+  e.preventDefault();
+  var touch = e.touches[0];
+  var items = Array.from(touchList.querySelectorAll('.task-item'));
+  items.forEach(function(item) { item.classList.remove('drag-over'); });
+  // 找到手指所在的目标元素
+  var target = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (target) {
+    var targetItem = target.closest('.task-item');
+    if (targetItem && targetItem !== touchDragEl && touchList.contains(targetItem)) {
+      targetItem.classList.add('drag-over');
+    }
+  }
+}
+
+function handleTouchEnd(e) {
+  if (!touchDragEl) return;
+  var touch = e.changedTouches[0];
+  var target = document.elementFromPoint(touch.clientX, touch.clientY);
+  if (target) {
+    var targetItem = target.closest('.task-item');
+    if (targetItem && targetItem !== touchDragEl && touchList.contains(targetItem)) {
+      var items = Array.from(touchList.querySelectorAll('.task-item'));
+      var fromIdx = items.indexOf(touchDragEl);
+      var toIdx = items.indexOf(targetItem);
+      if (fromIdx < toIdx) {
+        touchList.insertBefore(touchDragEl, targetItem.nextSibling);
+      } else {
+        touchList.insertBefore(touchDragEl, targetItem);
+      }
+      saveSortOrder(touchList);
+    }
+  }
+  touchDragEl.classList.remove('dragging');
+  var allItems = document.querySelectorAll('.task-item');
+  allItems.forEach(function(item) { item.classList.remove('drag-over'); });
+  touchDragEl = null;
+  touchList = null;
+}
+
+function saveSortOrder(listEl) {
+  var items = listEl.querySelectorAll('.task-item');
+  var orders = [];
+  for (var i = 0; i < items.length; i++) {
+    orders.push({ id: parseInt(items[i].getAttribute('data-id'), 10), sort_order: i });
+  }
+  // 同步更新本地缓存的排序
+  var dk = getDayKey(currentDate);
+  var cache = tasksCache[dk];
+  if (cache) {
+    var orderMap = {};
+    orders.forEach(function(o) { orderMap[o.id] = o.sort_order; });
+    cache.forEach(function(t) {
+      if (orderMap[t.id] !== undefined) t.sort_order = orderMap[t.id];
+    });
+    cache.sort(function(a, b) { return (a.sort_order || 0) - (b.sort_order || 0); });
+  }
+  // 推送到后端
+  api('PUT', '/tasks/reorder', { orders: orders })
+    .then(function() { toast('排序已保存'); })
+    .catch(function() { toast('排序保存失败', true); });
 }
 
 var CAT_ICONS = {'工作':'📌','沟通':'💬','跟进':'🔍','学习':'📚','生活':'🏠','其他':'📎'};
@@ -1411,7 +1578,8 @@ function taskHTML(t) {
     rangeTag = '';
   }
   
-  return '<div class="task-item'+(t.done?' done':'')+multiClass+'" data-id="'+t.id+'">'+
+  return '<div class="task-item'+(t.done?' done':'')+multiClass+'" data-id="'+t.id+'" draggable="true">'+
+    '<div class="drag-handle" title="拖拽排序">⋮⋮</div>'+
     '<div class="task-top">'+
       '<div class="task-checkbox'+(t.done?' checked':'')+'" data-cb="'+t.id+'">'+(t.done?'&#10003;':'')+'</div>'+
       '<span class="task-title">'+escHtml(t.title)+'</span>'+

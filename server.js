@@ -417,7 +417,7 @@ function createTables(db) {
     )
   `);
 
-  // 迁移：为已有表添加跨天字段（如果不存在）
+  // 迁移：为已有表添加跨天字段 + 排序字段（如果不存在）
   try {
     const cols = queryAll(db, "PRAGMA table_info(tasks)");
     const colNames = cols.map(c => c.name);
@@ -429,8 +429,14 @@ function createTables(db) {
       db.run(`ALTER TABLE tasks ADD COLUMN end_date TEXT`);
       console.log('[DB] 迁移: 已添加 end_date 字段');
     }
+    if (!colNames.includes('sort_order')) {
+      db.run(`ALTER TABLE tasks ADD COLUMN sort_order INTEGER DEFAULT 0`);
+      // 给已有任务按 created_at 顺序设置初始 sort_order
+      db.run(`UPDATE tasks SET sort_order = id WHERE sort_order = 0 OR sort_order IS NULL`);
+      console.log('[DB] 迁移: 已添加 sort_order 字段');
+    }
   } catch(e) {
-    console.warn('[DB] 迁移跨天字段失败（可能已存在）:', e.message);
+    console.warn('[DB] 迁移字段失败（可能已存在）:', e.message);
   }
 
   db.run(`CREATE INDEX IF NOT EXISTS idx_tasks_user_date ON tasks(user_id, task_date)`);
@@ -445,8 +451,8 @@ function importRemoteData(db, remoteData) {
   }
   // 导入任务数据
   for (const task of remoteData.data.tasks) {
-    db.run(`INSERT OR REPLACE INTO tasks (id, user_id, title, category, done, start_time, end_time, task_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [task.id, task.user_id, task.title, task.category || '工作', task.done || 0, task.start_time, task.end_time, task.task_date, task.created_at, task.updated_at]);
+    db.run(`INSERT OR REPLACE INTO tasks (id, user_id, title, category, done, start_time, end_time, task_date, start_date, end_date, sort_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [task.id, task.user_id, task.title, task.category || '工作', task.done || 0, task.start_time, task.end_time, task.task_date, task.start_date || null, task.end_date || null, task.sort_order || 0, task.created_at, task.updated_at]);
   }
 }
 
@@ -672,10 +678,10 @@ app.get('/api/tasks', authMiddleware, async (req, res) => {
           task_date = ? 
           OR (start_date IS NOT NULL AND start_date != '' AND end_date IS NOT NULL AND end_date != '' AND ? >= start_date AND ? <= end_date)
         )
-      ORDER BY created_at ASC
+      ORDER BY sort_order ASC, created_at ASC
     `, [req.user.userId, date, date, date]);
   } else {
-    tasks = queryAll(db, 'SELECT * FROM tasks WHERE user_id = ? ORDER BY task_date DESC, created_at ASC', [req.user.userId]);
+    tasks = queryAll(db, 'SELECT * FROM tasks WHERE user_id = ? ORDER BY task_date DESC, sort_order ASC, created_at ASC', [req.user.userId]);
   }
   // Convert SQLite integers to JS booleans
   const normalized = tasks.map(t => ({
@@ -699,9 +705,13 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
   
   const db = await getDB();
 
+  // 获取当前用户该日期的最大 sort_order
+  const maxOrder = queryGet(db, 'SELECT MAX(sort_order) as mx FROM tasks WHERE user_id = ? AND task_date = ?', [req.user.userId, taskDate]);
+  const nextOrder = (maxOrder && maxOrder.mx ? maxOrder.mx : 0) + 1;
+
   queryRun(db, `
-    INSERT INTO tasks (user_id, title, category, done, start_time, end_time, task_date, start_date, end_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO tasks (user_id, title, category, done, start_time, end_time, task_date, start_date, end_date, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     req.user.userId,
     title.trim(),
@@ -711,11 +721,26 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
     endTime || null,
     taskDate,
     sd,
-    ed
+    ed,
+    nextOrder
   ]);
 
   const task = queryGet(db, 'SELECT * FROM tasks WHERE rowid = last_insert_rowid()');
   res.json({ task: { ...task, done: task.done === 1 }, message: '创建成功' });
+});
+
+// PUT /api/tasks/reorder — 拖拽排序（批量更新 sort_order）
+// ⚠️ 必须放在 /api/tasks/:id 之前，否则 "reorder" 会被当作 :id 参数
+app.put('/api/tasks/reorder', authMiddleware, async (req, res) => {
+  const { orders } = req.body; // [{ id: 1, sort_order: 0 }, { id: 2, sort_order: 1 }, ...]
+  if (!orders || !Array.isArray(orders)) {
+    return res.status(400).json({ error: '参数错误' });
+  }
+  const db = await getDB();
+  for (const item of orders) {
+    queryRun(db, 'UPDATE tasks SET sort_order = ? WHERE id = ? AND user_id = ?', [item.sort_order, item.id, req.user.userId]);
+  }
+  res.json({ message: '排序已更新' });
 });
 
 // PUT /api/tasks/:id — 更新任务（支持跨天字段）
