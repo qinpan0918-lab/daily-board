@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-20T11:39:31.770Z",
+  "exported_at": "2026-04-20T11:44:31.777Z",
   "data": {
     "users": [
       {
@@ -304,14 +304,14 @@
         "user_id": 1,
         "title": "翻译本地化产品需求完善-进度梳理",
         "category": "工作",
-        "done": 0,
+        "done": 1,
         "start_time": "09:42",
         "end_time": null,
         "task_date": "2026-04-20",
         "start_date": "2026-04-20",
         "end_date": "2026-04-22",
         "created_at": "2026-04-20 06:51:34",
-        "updated_at": "2026-04-20 06:51:34",
+        "updated_at": "2026-04-20 11:42:07",
         "sort_order": 0
       },
       {
