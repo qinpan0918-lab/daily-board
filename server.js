@@ -699,9 +699,9 @@ app.post('/api/tasks', authMiddleware, async (req, res) => {
   }
   
   const taskDate = date || new Date().toISOString().slice(0, 10);
-  // 跨天：如果有 startDate/endDate，用它们；否则退化为单日（start_date=end_date=null）
-  const sd = startDate && startDate !== taskDate ? startDate : null;
-  const ed = endDate && endDate !== taskDate ? endDate : null;
+  // 日期范围：只要 startDate/endDate 都有值就保存（包括同一天的情况）
+  const sd = startDate || null;
+  const ed = endDate || null;
   
   const db = await getDB();
 
