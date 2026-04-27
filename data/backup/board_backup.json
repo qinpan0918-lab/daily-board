@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-04-27T08:08:09.420Z",
+  "exported_at": "2026-04-27T08:13:09.424Z",
   "data": {
     "users": [
       {
@@ -379,14 +379,14 @@
         "user_id": 1,
         "title": "海外重点需求汇报沟通",
         "category": "工作",
-        "done": 0,
+        "done": 1,
         "start_time": "14:30",
         "end_time": "16:00",
         "task_date": "2026-04-27",
         "start_date": "2026-04-27",
         "end_date": "2026-04-27",
         "created_at": "2026-04-27 03:12:16",
-        "updated_at": "2026-04-27 03:12:16",
+        "updated_at": "2026-04-27 08:09:54",
         "sort_order": 1
       },
       {
@@ -409,15 +409,45 @@
         "user_id": 1,
         "title": "确认支付方案-gpt",
         "category": "工作",
-        "done": 0,
+        "done": 1,
         "start_time": "11:12",
         "end_time": null,
         "task_date": "2026-04-27",
         "start_date": "2026-04-27",
         "end_date": "2026-04-27",
         "created_at": "2026-04-27 03:13:01",
-        "updated_at": "2026-04-27 03:13:01",
+        "updated_at": "2026-04-27 08:09:58",
         "sort_order": 3
+      },
+      {
+        "id": 36,
+        "user_id": 1,
+        "title": "对齐H1重点OKR",
+        "category": "工作",
+        "done": 0,
+        "start_time": "11:13",
+        "end_time": null,
+        "task_date": "2026-04-27",
+        "start_date": "2026-04-27",
+        "end_date": "2026-04-29",
+        "created_at": "2026-04-27 08:09:47",
+        "updated_at": "2026-04-27 08:09:47",
+        "sort_order": 4
+      },
+      {
+        "id": 37,
+        "user_id": 1,
+        "title": "推进项目侧跟进GPT接口和gemini接口交付",
+        "category": "工作",
+        "done": 0,
+        "start_time": "16:09",
+        "end_time": "",
+        "task_date": "2026-04-27",
+        "start_date": "2026-04-27",
+        "end_date": "2026-04-30",
+        "created_at": "2026-04-27 08:10:12",
+        "updated_at": "2026-04-27 08:10:24",
+        "sort_order": 5
       }
     ]
   }
