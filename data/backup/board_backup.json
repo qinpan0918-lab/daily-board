@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-05-11T02:43:25.372Z",
+  "exported_at": "2026-05-11T02:48:25.377Z",
   "data": {
     "users": [
       {
@@ -493,6 +493,21 @@
         "created_at": "2026-05-06 01:57:46",
         "updated_at": "2026-05-06 01:57:46",
         "sort_order": 2
+      },
+      {
+        "id": 41,
+        "user_id": 1,
+        "title": "测试完发布文件和架构，明确是否下钻",
+        "category": "工作",
+        "done": 0,
+        "start_time": "10:44",
+        "end_time": null,
+        "task_date": "2026-05-11",
+        "start_date": "2026-05-11",
+        "end_date": "2026-05-11",
+        "created_at": "2026-05-11 02:45:18",
+        "updated_at": "2026-05-11 02:45:18",
+        "sort_order": 1
       }
     ]
   }
