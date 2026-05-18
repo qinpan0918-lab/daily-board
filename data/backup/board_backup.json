@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-05-18T07:52:33.378Z",
+  "exported_at": "2026-05-18T07:57:03.381Z",
   "data": {
     "users": [
       {
@@ -475,6 +475,20 @@
         "end_date": null,
         "created_at": "2026-05-11 02:45:18",
         "updated_at": "2026-05-11 02:45:18"
+      },
+      {
+        "id": 42,
+        "user_id": 1,
+        "title": "刷新双下载按钮规则+刷新供应商权限",
+        "category": "工作",
+        "done": 0,
+        "start_time": "15:52",
+        "end_time": null,
+        "task_date": "2026-05-18",
+        "start_date": null,
+        "end_date": null,
+        "created_at": "2026-05-18 07:53:00",
+        "updated_at": "2026-05-18 07:53:00"
       }
     ]
   }
