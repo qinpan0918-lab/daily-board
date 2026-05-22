@@ -1011,7 +1011,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     time: new Date().toISOString(),
-    version: '2.1.0',
+    version: '2.1.1',
     dbReady: !!dbPromise,
     githubBackup: GITHUB_TOKEN ? 'enabled' : 'disabled (no token)'
   });
