@@ -2327,7 +2327,8 @@ document.addEventListener('DOMContentLoaded',function(){
 
   // --- add task ---
   document.getElementById('addTaskBtn').addEventListener('click',function(e){e.stopPropagation();handleAddSingle();});
-  document.getElementById('taskInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();handleAddSingle();}});
+  // 回车快捷新增已禁用（易误触）
+  // document.getElementById('taskInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();handleAddSingle();}});
 
   // --- date range (跨天事项) toggle & events ---
   // 初始化默认值：发起时间=现在，开始/结束日期=今天
