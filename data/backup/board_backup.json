@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-06-01T03:21:19.233Z",
+  "exported_at": "2026-06-01T09:27:03.196Z",
   "data": {
     "users": [
       {
@@ -643,6 +643,20 @@
         "end_date": null,
         "created_at": "2026-06-01 03:06:19",
         "updated_at": "2026-06-01 03:06:19"
+      },
+      {
+        "id": 54,
+        "user_id": 1,
+        "title": "最后复测一遍智能翻译需求",
+        "category": "工作",
+        "done": 0,
+        "start_time": "17:26",
+        "end_time": "",
+        "task_date": "2026-06-01",
+        "start_date": "2026-06-01",
+        "end_date": "2026-06-02",
+        "created_at": "2026-06-01 09:26:54",
+        "updated_at": "2026-06-01 09:27:00"
       }
     ]
   }
