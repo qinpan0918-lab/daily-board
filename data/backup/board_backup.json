@@ -1,6 +1,6 @@
 {
   "version": "2.0.0",
-  "exported_at": "2026-06-01T09:42:07.307Z",
+  "exported_at": "2026-06-02T11:45:39.221Z",
   "data": {
     "users": [
       {
@@ -639,8 +639,8 @@
         "start_time": "11:05",
         "end_time": "",
         "task_date": "2026-06-01",
-        "start_date": "2026-06-02",
-        "end_date": "2026-06-03",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-06-01 03:06:19",
         "updated_at": "2026-06-01 09:27:07"
       },
@@ -653,8 +653,8 @@
         "start_time": "17:26",
         "end_time": "",
         "task_date": "2026-06-01",
-        "start_date": "2026-06-01",
-        "end_date": "2026-06-02",
+        "start_date": null,
+        "end_date": null,
         "created_at": "2026-06-01 09:26:54",
         "updated_at": "2026-06-01 09:27:00"
       }
